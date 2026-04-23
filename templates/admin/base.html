@@ -1,0 +1,73 @@
+{% from "icons.html" import logo, icon_briefcase, icon_users, icon_bar_chart, icon_shield, icon_settings, icon_log_out, icon_plus %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Dashboard{% endblock %} — {{ brand_name }} Recruiter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23635BFF'/><path d='M9 16.5L14 21.5L23 10.5' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+</head>
+<body>
+  <nav class="nav nav-light">
+    <div class="container nav-inner">
+      <a href="{{ url_for('admin_jobs.dashboard') }}" class="nav-brand">
+        {{ logo(28) }}
+        {{ brand_name }} <span class="text-xs text-tertiary" style="margin-left:4px">Recruiter</span>
+      </a>
+      <div class="nav-links">
+        <a href="{{ url_for('admin_jobs.dashboard') }}" class="{% if request.endpoint == 'admin_jobs.dashboard' %}active{% endif %}">Dashboard</a>
+        <a href="{{ url_for('admin_jobs.jobs_list') }}" class="{% if 'job' in (request.endpoint or '') and request.endpoint != 'admin_jobs.dashboard' %}active{% endif %}">{{ icon_briefcase() }} Jobs</a>
+        <a href="{{ url_for('admin_screening.index') }}" class="{% if 'screening' in (request.endpoint or '') %}active{% endif %}">{{ icon_bar_chart() }} Screening</a>
+        <a href="{{ url_for('admin_jobs.job_create') }}" class="btn btn-primary btn-sm">{{ icon_plus() }} New Job</a>
+        {% if current_recruiter %}
+        <div style="display:flex;align-items:center;gap:8px;padding:0 4px">
+          <div class="avatar avatar-sm" style="background:var(--accent-light);color:var(--accent);font-size:.6rem;font-weight:800;flex-shrink:0">
+            {{ current_recruiter.initials }}
+          </div>
+          <span class="text-sm font-medium" style="color:var(--text-secondary);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ current_recruiter.first_name }}</span>
+        </div>
+        {% endif %}
+        <form action="{{ url_for('admin_auth.logout') }}" method="POST" style="display:inline">
+          <button type="submit" class="nav-links" style="padding:7px 10px;border:none;background:none;cursor:pointer;color:var(--text-tertiary)" title="Sign out">{{ icon_log_out() }}</button>
+        </form>
+      </div>
+    </div>
+  </nav>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-messages">
+    {% for category, message in messages %}
+    <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <main class="container admin-layout">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Candidate Drawer -->
+  <div id="drawer-overlay" class="drawer-overlay">
+    <div id="drawer-panel" class="drawer-panel">
+      <div class="drawer-header">
+        <h3>Candidate Details</h3>
+        <button class="btn btn-icon btn-ghost" onclick="closeDrawer()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="drawer-body" id="drawer-body"></div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

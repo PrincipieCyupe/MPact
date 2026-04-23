@@ -1,0 +1,149 @@
+{% extends "admin/base.html" %}
+{% from "icons.html" import icon_briefcase, icon_users, icon_check_circle, icon_star, icon_bar_chart, icon_arrow_right, icon_plus, empty_applicants_svg %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Welcome + Quick actions -->
+<div class="dash-quick-actions">
+  <div class="dash-welcome">
+    <div class="dash-welcome-name">
+      Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 18 else 'evening') }}, {{ current_recruiter.first_name if current_recruiter else 'Recruiter' }} 👋
+    </div>
+    <div class="dash-welcome-sub">Here's what's happening across your jobs today.</div>
+  </div>
+  <a href="{{ url_for('admin_jobs.job_create') }}" class="btn btn-primary btn-sm">
+    {{ icon_plus() }} Post a job
+  </a>
+  <a href="{{ url_for('admin_screening.index') }}" class="btn btn-secondary btn-sm">
+    {{ icon_bar_chart() }} Run screening
+  </a>
+</div>
+
+<!-- Stat cards -->
+<div class="stats-grid" style="margin-bottom:32px">
+  <div class="dash-stat-card accent">
+    <div class="dash-stat-icon" style="background:var(--accent-light);color:var(--accent)">{{ icon_briefcase() }}</div>
+    <div class="dash-stat-value">{{ job_count }}</div>
+    <div class="dash-stat-label">Active Jobs</div>
+  </div>
+  <div class="dash-stat-card info">
+    <div class="dash-stat-icon" style="background:var(--info-bg);color:var(--info)">{{ icon_users() }}</div>
+    <div class="dash-stat-value">{{ applicant_count }}</div>
+    <div class="dash-stat-label">Total Applicants</div>
+  </div>
+  <div class="dash-stat-card success">
+    <div class="dash-stat-icon" style="background:var(--success-bg);color:var(--success)">{{ icon_check_circle() }}</div>
+    <div class="dash-stat-value">{{ screened_count }}</div>
+    <div class="dash-stat-label">Screened</div>
+  </div>
+  <div class="dash-stat-card warn">
+    <div class="dash-stat-icon" style="background:var(--warn-bg);color:var(--warn)">{{ icon_star() }}</div>
+    <div class="dash-stat-value">{{ shortlist_count }}</div>
+    <div class="dash-stat-label">Shortlisted</div>
+  </div>
+  <div class="dash-stat-card muted">
+    <div class="dash-stat-icon" style="background:var(--bg-inset);color:var(--text-tertiary)">{{ icon_bar_chart() }}</div>
+    <div class="dash-stat-value" style="color:{{ 'var(--success)' if avg_score and avg_score >= 70 else ('var(--warn)' if avg_score and avg_score >= 50 else 'var(--text-primary)') }}">
+      {{ avg_score or '—' }}
+    </div>
+    <div class="dash-stat-label">Avg Score</div>
+  </div>
+</div>
+
+<!-- Main content grid -->
+<div class="grid grid-2" style="gap:24px;align-items:start">
+
+  <!-- Recent Jobs -->
+  <div class="admin-section">
+    <div class="admin-section-header">
+      <div>
+        <h3>Jobs</h3>
+        <p class="text-xs text-tertiary" style="margin-top:2px">Your most recent postings</p>
+      </div>
+      <a href="{{ url_for('admin_jobs.jobs_list') }}" class="btn btn-ghost btn-sm">All jobs {{ icon_arrow_right() }}</a>
+    </div>
+
+    {% if recent_jobs %}
+    <div class="card" style="overflow:hidden">
+      {% for job in recent_jobs %}
+      <a href="{{ url_for('admin_jobs.job_detail', job_id=job.id) }}"
+         style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:{% if not loop.last %}1px solid var(--border-light){% else %}none{% endif %};text-decoration:none;color:inherit;transition:background var(--t-fast)"
+         onmouseover="this.style.background='var(--bg-inset)'" onmouseout="this.style.background=''">
+        <div style="flex:1;min-width:0">
+          <div class="font-semibold" style="font-size:.9375rem;letter-spacing:-.015em;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ job.title }}</div>
+          <div class="text-xs text-tertiary">{{ job.meta_line }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:16px">
+          <div style="text-align:right">
+            <div class="font-mono font-bold" style="font-size:.875rem;color:var(--text-primary)">{{ job.applicant_count }}</div>
+            <div class="text-xs text-tertiary">applicants</div>
+          </div>
+          {% if job.screened_count > 0 %}
+          <span class="badge badge-success">{{ job.screened_count }} screened</span>
+          {% else %}
+          <span class="badge badge-muted">Not screened</span>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="padding:48px 24px;text-align:center">
+      <div style="width:48px;height:48px;background:var(--accent-light);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;color:var(--accent);margin:0 auto 16px">{{ icon_briefcase() }}</div>
+      <div class="font-semibold" style="margin-bottom:6px">No jobs posted yet</div>
+      <p class="text-sm text-tertiary" style="margin-bottom:20px">Create your first job listing to start receiving applications.</p>
+      <a href="{{ url_for('admin_jobs.job_create') }}" class="btn btn-primary btn-sm">{{ icon_plus() }} Post your first job</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Top Candidates -->
+  <div class="admin-section">
+    <div class="admin-section-header">
+      <div>
+        <h3>Top Candidates</h3>
+        <p class="text-xs text-tertiary" style="margin-top:2px">Highest scoring screened applicants</p>
+      </div>
+      <a href="{{ url_for('admin_screening.index') }}" class="btn btn-ghost btn-sm">Screening {{ icon_arrow_right() }}</a>
+    </div>
+
+    {% if top_candidates %}
+    <div class="card" style="overflow:hidden">
+      {% for c in top_candidates %}
+      <div class="applicant-row"
+           style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:{% if not loop.last %}1px solid var(--border-light){% else %}none{% endif %};cursor:pointer;transition:background var(--t-fast)"
+           onmouseover="this.style.background='var(--bg-inset)'" onmouseout="this.style.background=''"
+           onclick="openDrawer({{ c.id }})">
+        <div class="avatar avatar-sm" style="background:{{ c.avatar_bg }};color:{{ c.avatar_color }};flex-shrink:0">{{ c.initials }}</div>
+        <div style="flex:1;min-width:0">
+          <div class="font-semibold text-sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.full_name }}</div>
+          <div class="text-xs text-tertiary" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.job.title }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+          <div style="text-align:right">
+            <div class="score-value {{ 'high' if c.final_score >= 75 else ('mid' if c.final_score >= 50 else 'low') }} font-mono" style="font-size:.9rem">{{ c.final_score|round(1) }}</div>
+          </div>
+          <span class="badge badge-{{ c.recommendation_tone }}" style="width:80px;justify-content:center">{{ c.recommendation_label }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="padding:48px 24px;text-align:center">
+      {{ empty_applicants_svg() }}
+      <div class="font-semibold" style="margin-bottom:6px;margin-top:12px">No screened candidates yet</div>
+      <p class="text-sm text-tertiary">Run AI screening on a job to see top candidates ranked here.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const now = new Date();
+</script>
+{% endblock %}

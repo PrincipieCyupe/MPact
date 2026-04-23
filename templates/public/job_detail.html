@@ -1,0 +1,78 @@
+{% extends "public/base.html" %}
+{% from "icons.html" import icon_map_pin, icon_clock, icon_briefcase, icon_graduation, icon_arrow_right %}
+
+{% block title %}{{ job.title }} — {{ brand_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div style="padding-top:28px">
+    <a href="{{ url_for('public.jobs_list') }}" class="text-sm text-secondary" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:16px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      All positions
+    </a>
+  </div>
+
+  <div class="job-detail-layout">
+    <div class="job-main">
+      <h1 style="margin-bottom:8px">{{ job.title }}</h1>
+      <p class="text-secondary" style="font-size:1.05rem;margin-bottom:24px">{{ job.meta_line }}</p>
+
+      {% if job.skills_list %}
+      <div class="flex flex-wrap gap-xs mb-lg">
+        {% for skill in job.skills_list %}
+        <span class="tag tag-accent">{{ skill }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if job.description %}
+      <div class="job-description">
+        {% for para in job.description.split('\n') %}
+        {% if para.strip() %}<p>{{ para }}</p>{% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if related %}
+      <hr class="divider" style="margin-top:40px">
+      <h3 style="margin-bottom:16px">Other open roles</h3>
+      <div class="grid grid-3" style="gap:12px">
+        {% for r in related %}
+        <a href="{{ url_for('public.job_detail', job_id=r.id) }}" class="card card-clickable" style="text-decoration:none;color:inherit">
+          <div class="card-body-sm">
+            <div class="font-semibold text-sm">{{ r.title }}</div>
+            <div class="text-xs text-tertiary">{{ r.meta_line }}</div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="job-sidebar">
+      <div class="card">
+        <a href="{{ url_for('public.apply', job_id=job.id) }}" class="btn btn-primary btn-lg" style="width:100%;margin-bottom:16px">
+          <span class="btn-text">Apply Now</span> {{ icon_arrow_right() }}
+        </a>
+        <ul class="job-info-list">
+          <li><span class="info-icon">{{ icon_map_pin() }}</span> {{ job.short_location }}</li>
+          <li><span class="info-icon">{{ icon_briefcase() }}</span> {{ job.employment_type or 'Full-time' }}</li>
+          {% if job.seniority %}
+          <li><span class="info-icon">{{ icon_clock() }}</span> {{ job.seniority }}</li>
+          {% endif %}
+          {% if job.department %}
+          <li><span class="info-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span> {{ job.department }}</li>
+          {% endif %}
+          {% if job.min_years_experience %}
+          <li><span class="info-icon">{{ icon_clock() }}</span> {{ job.min_years_experience }}+ years experience</li>
+          {% endif %}
+          {% if job.required_education and job.required_education != 'any' %}
+          <li><span class="info-icon">{{ icon_graduation() }}</span> {{ job.required_education|capitalize }} or equivalent</li>
+          {% endif %}
+        </ul>
+        <p class="text-xs text-tertiary" style="margin-top:14px">Posted {{ job.created_at.strftime('%b %d, %Y') }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

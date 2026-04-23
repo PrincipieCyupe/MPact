@@ -1,0 +1,147 @@
+{% from "icons.html" import logo %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email — {{ brand_name }} Recruiter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23635BFF'/><path d='M9 16.5L14 21.5L23 10.5' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+</head>
+<body class="auth-body">
+  <div class="auth-shell">
+
+    <!-- Left brand panel -->
+    <div class="auth-panel-left">
+      <div class="auth-panel-glow"></div>
+      <div class="auth-panel-grid"></div>
+      <div class="auth-panel-inner">
+        <a href="{{ url_for('public.landing') }}" class="auth-logo-link">
+          {{ logo(32) }}
+          <span class="auth-logo-name">{{ brand_name }}</span>
+        </a>
+        <div class="auth-panel-copy">
+          <h2 class="auth-panel-headline">Almost there,<br>{{ name.split()[0] if name else 'Recruiter' }}.</h2>
+          <p class="auth-panel-sub">One quick step — confirm your email and your recruiter dashboard will be ready to go.</p>
+        </div>
+        <div class="auth-feature-list">
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span>Secure your account with a verified email</span>
+          </div>
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span>Get notified when candidates apply</span>
+          </div>
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span>Full dashboard access after verification</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="auth-panel-right">
+      <div class="auth-form-wrap" style="max-width:420px">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div style="margin-bottom:20px">
+          {% for cat, msg in messages %}
+          <div class="auth-alert auth-alert-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Email icon -->
+        <div style="width:64px;height:64px;background:var(--accent-light);border-radius:16px;
+                    display:flex;align-items:center;justify-content:center;margin-bottom:24px;color:var(--accent)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="3"/>
+            <path d="M2 7l10 7 10-7"/>
+          </svg>
+        </div>
+
+        <div class="auth-form-header">
+          <h1 class="auth-form-title">Check your inbox</h1>
+          <p class="auth-form-sub" style="line-height:1.65">
+            {% if email %}
+            We sent a verification link to<br>
+            <strong style="color:var(--text-primary)">{{ email }}</strong>
+            {% else %}
+            We sent a verification link to your email address.
+            {% endif %}
+            <br><br>
+            Click the link in the email to activate your account. The link expires in <strong>24 hours</strong>.
+          </p>
+        </div>
+
+        {% if dev_url %}
+        <!-- Dev mode: SMTP not configured, show link directly -->
+        <div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:10px;
+                    padding:16px 18px;margin-bottom:24px">
+          <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:var(--warn);
+                    text-transform:uppercase;letter-spacing:.06em">
+            Dev mode — SMTP not configured
+          </p>
+          <p style="margin:0 0 10px;font-size:13px;color:var(--text-secondary);line-height:1.5">
+            No email server is set up. Click the link below to verify directly:
+          </p>
+          <a href="{{ dev_url }}"
+             style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);
+                    word-break:break-all;text-decoration:none;line-height:1.5">
+            {{ dev_url }}
+          </a>
+        </div>
+        {% endif %}
+
+        <!-- Resend form -->
+        <form method="POST" action="{{ url_for('admin_auth.resend_verification') }}" style="margin-bottom:20px">
+          {% if email %}
+          <input type="hidden" name="email" value="{{ email }}">
+          {% else %}
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Email address</label>
+            <input type="email" name="email" class="form-input"
+                   placeholder="The email you registered with" required>
+          </div>
+          {% endif %}
+          <button type="submit" class="btn btn-secondary auth-submit-btn"
+                  style="width:100%;justify-content:center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-.01-6"/>
+            </svg>
+            Resend verification email
+          </button>
+        </form>
+
+        <div class="auth-divider"><span>Already verified?</span></div>
+
+        <a href="{{ url_for('admin_auth.login') }}" class="auth-alt-btn">
+          Sign in to your account
+        </a>
+
+        <p class="auth-footer-note" style="margin-top:20px">
+          Wrong email? <a href="{{ url_for('admin_auth.register') }}">Create a new account →</a>
+        </p>
+
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

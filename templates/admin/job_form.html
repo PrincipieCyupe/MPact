@@ -1,0 +1,277 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ 'Edit' if job else 'New' }} Job{% endblock %}
+
+{% block content %}
+<div style="max-width:760px">
+  <a href="{{ url_for('admin_jobs.jobs_list') }}" class="text-sm text-secondary" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:16px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to jobs
+  </a>
+  <h2 style="margin-bottom:24px">{{ 'Edit' if job else 'Create' }} Job Listing</h2>
+
+  <form method="POST" action="{{ url_for('admin_jobs.job_edit', job_id=job.id) if job else url_for('admin_jobs.job_create') }}" id="job-form">
+
+    <!-- ── Basic Info ───────────────────────────────────── -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-body" style="padding:28px 32px">
+        <h4 style="margin-bottom:20px;color:var(--text-tertiary);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Basic Info</h4>
+
+        <div class="form-group">
+          <label class="form-label">Job Title <span class="required-star">*</span></label>
+          <input type="text" name="title" class="form-input" value="{{ job.title if job else '' }}"
+                 placeholder="e.g. Senior Backend Engineer" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <input type="text" name="department" class="form-input" value="{{ job.department if job else '' }}" placeholder="Engineering, Data, etc.">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <input type="text" name="location" class="form-input" value="{{ job.location if job else '' }}" placeholder="Kigali, Remote">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Employment Type</label>
+            <select name="employment_type" class="form-select">
+              {% set et = job.employment_type if job else '' %}
+              <option value="">Select...</option>
+              <option value="Full-time"  {{ 'selected' if et == 'Full-time'  }}>Full-time</option>
+              <option value="Part-time"  {{ 'selected' if et == 'Part-time'  }}>Part-time</option>
+              <option value="Contract"   {{ 'selected' if et == 'Contract'   }}>Contract</option>
+              <option value="Internship" {{ 'selected' if et == 'Internship' }}>Internship</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Seniority</label>
+            <select name="seniority" class="form-select">
+              {% set sn = job.seniority if job else '' %}
+              <option value="">Select...</option>
+              <option value="Junior"   {{ 'selected' if sn == 'Junior'   }}>Junior</option>
+              <option value="Mid-level"{{ 'selected' if sn == 'Mid-level'}}>Mid-level</option>
+              <option value="Senior"   {{ 'selected' if sn == 'Senior'   }}>Senior</option>
+              <option value="Lead"     {{ 'selected' if sn == 'Lead'     }}>Lead</option>
+              <option value="Manager"  {{ 'selected' if sn == 'Manager'  }}>Manager</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-textarea" rows="6"
+            placeholder="Describe the role, responsibilities, and what makes it great...">{{ job.description if job else '' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Screening Criteria ───────────────────────────── -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-body" style="padding:28px 32px">
+        <h4 style="margin-bottom:20px;color:var(--text-tertiary);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Screening Criteria</h4>
+
+        <div class="form-group">
+          <label class="form-label">Required Skills</label>
+          <input type="text" name="required_skills" class="form-input"
+                 value="{{ job.required_skills if job else '' }}"
+                 placeholder="Python, Flask, PostgreSQL, Docker">
+          <p class="form-hint">Comma-separated. Matched against applicant skills during AI scoring.</p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Minimum Years Experience</label>
+            <input type="number" name="min_years_experience" class="form-input"
+                   value="{{ job.min_years_experience if job else '0' }}" min="0" max="40">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Required Education</label>
+            <select name="required_education" class="form-select">
+              {% set re = job.required_education if job else '' %}
+              <option value="any"      {{ 'selected' if re == 'any' or not re }}>Any</option>
+              <option value="phd"      {{ 'selected' if re == 'phd'      }}>PhD</option>
+              <option value="masters"  {{ 'selected' if re == 'masters'  }}>Master's</option>
+              <option value="bachelors"{{ 'selected' if re == 'bachelors'}}>Bachelor's</option>
+              <option value="diploma"  {{ 'selected' if re == 'diploma'  }}>Diploma</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Application Questions ─────────────────────────── -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-body" style="padding:28px 32px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px">
+          <div>
+            <h4 style="margin:0 0 4px;color:var(--text-tertiary);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Application Questions</h4>
+            <p class="text-sm text-tertiary" style="margin:0">Custom questions shown to candidates when they apply. Only you see the answers.</p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="add-field-btn" style="flex-shrink:0;white-space:nowrap">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Question
+          </button>
+        </div>
+
+        <div id="custom-fields-list" style="display:flex;flex-direction:column;gap:12px"></div>
+
+        <div id="custom-fields-empty" style="padding:28px;text-align:center;border:2px dashed var(--border-light);border-radius:var(--r-lg);color:var(--text-tertiary)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:8px;opacity:.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <p class="text-sm" style="margin:0">No custom questions yet — click <strong>Add Question</strong> to start.</p>
+        </div>
+
+        <!-- Hidden field to carry serialised field data -->
+        <input type="hidden" name="custom_fields_json" id="custom-fields-json" value="[]">
+      </div>
+    </div>
+
+    <!-- ── Publish + Actions ─────────────────────────────── -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-body" style="padding:24px 32px">
+        <div class="form-check" style="margin-bottom:0">
+          <input type="checkbox" name="is_published" id="is_published" value="1"
+                 {{ 'checked' if (job and job.is_published) or not job }}>
+          <label for="is_published" class="form-label" style="margin-bottom:0">
+            Publish this job <span class="text-tertiary font-normal">(visible to applicants on the public site)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-sm">
+      <button type="submit" class="btn btn-primary btn-lg">
+        {{ 'Update' if job else 'Create' }} Job
+      </button>
+      <a href="{{ url_for('admin_jobs.jobs_list') }}" class="btn btn-ghost btn-lg">Cancel</a>
+    </div>
+
+  </form>
+
+  {% if job %}
+  <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border-light)">
+    <form method="POST" action="{{ url_for('admin_jobs.job_delete', job_id=job.id) }}"
+          onsubmit="return confirm('Delete this job and all its applications? This cannot be undone.')">
+      <button type="submit" class="btn btn-danger btn-sm">Delete this job</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Custom field builder ─────────────────────────────────── */
+const EXISTING_FIELDS = {{ custom_fields_json|safe }};
+const fieldsList   = document.getElementById('custom-fields-list');
+const emptyState   = document.getElementById('custom-fields-empty');
+const jsonInput    = document.getElementById('custom-fields-json');
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function syncEmpty() {
+  emptyState.style.display = fieldsList.children.length === 0 ? '' : 'none';
+}
+
+function addField(data) {
+  data = data || {};
+  const ftype   = data.type    || 'text';
+  const isReq   = data.required || false;
+  const isSelect = ftype === 'select';
+
+  const row = document.createElement('div');
+  row.className = 'custom-field-builder-row';
+  if (data.id) row.dataset.fieldId = data.id;
+
+  row.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <input type="text"
+             class="form-input cf-label"
+             placeholder="Question e.g. Why do you want this role?"
+             value="${esc(data.label || '')}"
+             style="flex:1;min-width:200px">
+      <select class="form-select cf-type" style="width:148px;flex-shrink:0" onchange="onTypeChange(this)">
+        <option value="text"     ${ftype==='text'    ?'selected':''}>Short answer</option>
+        <option value="textarea" ${ftype==='textarea'?'selected':''}>Long answer</option>
+        <option value="yesno"   ${ftype==='yesno'   ?'selected':''}>Yes / No</option>
+        <option value="select"   ${ftype==='select'  ?'selected':''}>Dropdown</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;flex-shrink:0">
+        <input type="checkbox" class="cf-required" ${isReq?'checked':''}>
+        <span class="text-sm text-secondary">Required</span>
+      </label>
+      <button type="button"
+              onclick="removeField(this)"
+              class="btn btn-ghost btn-sm btn-icon"
+              title="Remove question"
+              style="flex-shrink:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="cf-options-wrap" style="${isSelect ? '' : 'display:none;'}margin-top:10px">
+      <input type="text"
+             class="form-input cf-options"
+             placeholder="Option A, Option B, Option C  (comma-separated)"
+             value="${esc((data.options||[]).join(', '))}">
+      <p class="form-hint" style="margin-top:4px">These become the dropdown choices candidates see.</p>
+    </div>`;
+
+  fieldsList.appendChild(row);
+  syncEmpty();
+}
+
+function onTypeChange(sel) {
+  const optsWrap = sel.closest('.custom-field-builder-row').querySelector('.cf-options-wrap');
+  optsWrap.style.display = sel.value === 'select' ? '' : 'none';
+}
+
+function removeField(btn) {
+  btn.closest('.custom-field-builder-row').remove();
+  syncEmpty();
+}
+
+document.getElementById('add-field-btn').addEventListener('click', () => addField());
+
+// Seed existing fields
+EXISTING_FIELDS.forEach(f => addField(f));
+syncEmpty();
+
+// Before submit — serialise all rows into the hidden JSON field
+document.getElementById('job-form').addEventListener('submit', function() {
+  const rows = fieldsList.querySelectorAll('.custom-field-builder-row');
+  const fields = [];
+  rows.forEach(row => {
+    const label = row.querySelector('.cf-label').value.trim();
+    if (!label) return;
+    const type  = row.querySelector('.cf-type').value;
+    const req   = row.querySelector('.cf-required').checked;
+    const rawOpts = row.querySelector('.cf-options').value;
+    const opts  = rawOpts.split(',').map(s => s.trim()).filter(Boolean);
+    const payload = { label, type, required: req };
+    if (row.dataset.fieldId) payload.id = parseInt(row.dataset.fieldId);
+    if (type === 'select') payload.options = opts;
+    fields.push(payload);
+  });
+  jsonInput.value = JSON.stringify(fields);
+});
+</script>
+
+<style>
+.custom-field-builder-row {
+  background: var(--bg-inset);
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  transition: border-color var(--t-fast);
+}
+.custom-field-builder-row:hover {
+  border-color: var(--border);
+}
+</style>
+{% endblock %}

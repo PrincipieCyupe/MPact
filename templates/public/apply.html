@@ -1,0 +1,340 @@
+{% extends "public/base.html" %}
+{% from "icons.html" import icon_upload %}
+
+{% block title %}Apply — {{ job.title }} — {{ brand_name }}{% endblock %}
+
+{% block content %}
+<div class="apply-shell">
+
+  <!-- Left panel — job context -->
+  <aside class="apply-sidebar">
+    <div class="apply-sidebar-inner">
+      <a href="{{ url_for('public.job_detail', job_id=job.id) }}" class="back-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to listing
+      </a>
+      <div class="apply-job-card">
+        <div class="apply-job-badge">Now Hiring</div>
+        <h2 class="apply-job-title">{{ job.title }}</h2>
+        <p class="apply-job-meta">{{ job.meta_line }}</p>
+        {% if job.skills_list %}
+        <div class="apply-skills-list">
+          {% for skill in job.skills_list[:6] %}
+          <span class="tag tag-accent">{{ skill }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="apply-side-note">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Your data is used only for this application and never sold to third parties.</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right panel — form -->
+  <main class="apply-main">
+    <div class="apply-form-card card">
+      <div class="apply-form-inner">
+
+        <!-- Step header -->
+        <div class="apply-form-header">
+          <div class="apply-step-label">Application</div>
+          <h3 class="apply-form-title">Tell us about yourself</h3>
+          <p class="apply-form-sub">Upload your CV to autofill the form instantly, or fill it in manually.</p>
+        </div>
+
+        <!-- CV smart upload zone -->
+        <div id="cv-upload-zone" class="cv-smart-zone">
+          <label for="cv-parse-input" class="cv-smart-drop" id="cv-drop-area">
+            <input type="file" id="cv-parse-input" accept=".pdf" style="display:none">
+            <div class="cv-smart-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+            </div>
+            <div class="cv-smart-text">
+              <span class="cv-smart-title" id="cv-drop-title">Drop your CV here to autofill</span>
+              <span class="cv-smart-hint">PDF · fields are filled automatically, you review before submitting</span>
+            </div>
+            <span class="cv-smart-cta">Browse file</span>
+          </label>
+          <div id="cv-parse-status" class="cv-parse-status" style="display:none"></div>
+        </div>
+
+        <div class="apply-or-divider">
+          <span>or fill in manually</span>
+        </div>
+
+        <!-- Application form -->
+        <form id="apply-form" method="POST" enctype="multipart/form-data"
+              action="{{ url_for('public.apply', job_id=job.id) }}">
+
+          <div class="apply-section-label">Personal Details</div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Full Name <span class="required-star">*</span></label>
+              <input type="text" name="full_name" id="f-name" class="form-input" placeholder="Aline Uwase" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email <span class="required-star">*</span></label>
+              <input type="email" name="email" id="f-email" class="form-input" placeholder="you@example.com" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Phone</label>
+              <input type="tel" name="phone" id="f-phone" class="form-input" placeholder="+250 788 000 000">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location</label>
+              <input type="text" name="location" id="f-location" class="form-input" placeholder="Kigali, Remote, etc.">
+            </div>
+          </div>
+
+          <div class="apply-section-label" style="margin-top:8px">Experience &amp; Education</div>
+
+          <div class="form-group">
+            <label class="form-label">Skills</label>
+            <input type="text" name="skills" id="f-skills" class="form-input" placeholder="Python, Flask, PostgreSQL, Docker">
+            <p class="form-hint">Comma-separated — align these with what the role asks for.</p>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Years of Experience</label>
+              <input type="number" name="years_experience" id="f-exp" class="form-input" min="0" max="40" step="0.5" placeholder="4">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Education Level</label>
+              <select name="education_level" id="f-edu-level" class="form-select">
+                <option value="">Select level...</option>
+                <option value="phd">PhD</option>
+                <option value="masters">Master's degree</option>
+                <option value="bachelors">Bachelor's degree</option>
+                <option value="diploma">Diploma / Certificate</option>
+                <option value="highschool">High school</option>
+                <option value="none">Self-taught / Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Education Details</label>
+            <input type="text" name="education" id="f-edu" class="form-input" placeholder="BSc Computer Science, University of Rwanda">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Notable Projects</label>
+            <textarea name="projects" id="projects" class="form-textarea" rows="4"
+              placeholder="Describe your key projects — one per line.&#10;e.g. Built an e-commerce platform with Django&#10;Created a real-time analytics dashboard"></textarea>
+            <p class="form-hint" id="project-count-hint">0 projects detected</p>
+          </div>
+
+          <!-- Resume file attachment -->
+          <div class="form-group">
+            <label class="form-label" for="resume-input">
+              Resume / CV <span class="text-tertiary font-medium" style="font-weight:400;font-size:.8rem">(PDF, optional)</span>
+            </label>
+            <label for="resume-input" class="resume-attach-zone" id="resume-drop">
+              <input type="file" id="resume-input" name="resume" accept=".pdf" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+              <span class="resume-attach-name" id="resume-label">Attach PDF file</span>
+              <span class="resume-attach-btn">Browse</span>
+            </label>
+          </div>
+
+          {% if job.custom_fields %}
+          <div class="apply-section-label" style="margin-top:8px">Additional Questions</div>
+          {% for field in job.custom_fields %}
+          <div class="form-group">
+            <label class="form-label" for="custom_{{ field.id }}">
+              {{ field.label }}
+              {% if field.required %}<span class="required-star">*</span>{% endif %}
+            </label>
+
+            {% if field.field_type == 'textarea' %}
+            <textarea name="custom_{{ field.id }}" id="custom_{{ field.id }}"
+                      class="form-textarea" rows="4"
+                      placeholder="Your answer..."
+                      {{ 'required' if field.required }}></textarea>
+
+            {% elif field.field_type == 'yesno' %}
+            <div style="display:flex;gap:16px;margin-top:4px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem">
+                <input type="radio" name="custom_{{ field.id }}" value="Yes"
+                       {{ 'required' if field.required }}>
+                Yes
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem">
+                <input type="radio" name="custom_{{ field.id }}" value="No">
+                No
+              </label>
+            </div>
+
+            {% elif field.field_type == 'select' and field.options_list %}
+            <select name="custom_{{ field.id }}" id="custom_{{ field.id }}"
+                    class="form-select" {{ 'required' if field.required }}>
+              <option value="">Select an option...</option>
+              {% for opt in field.options_list %}
+              <option value="{{ opt }}">{{ opt }}</option>
+              {% endfor %}
+            </select>
+
+            {% else %}
+            <input type="text" name="custom_{{ field.id }}" id="custom_{{ field.id }}"
+                   class="form-input" placeholder="Your answer..."
+                   {{ 'required' if field.required }}>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% endif %}
+
+          <button type="submit" class="btn btn-primary apply-submit-btn">
+            <span class="btn-text">Submit Application</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const JOB_ID = {{ job.id }};
+let parsedFile = null;
+
+// CV parse + autofill
+const cvInput    = document.getElementById('cv-parse-input');
+const cvDropArea = document.getElementById('cv-drop-area');
+const cvStatus   = document.getElementById('cv-parse-status');
+
+cvInput.addEventListener('change', function() {
+  if (this.files[0]) handleCVFile(this.files[0]);
+});
+
+cvDropArea.addEventListener('dragover', e => { e.preventDefault(); cvDropArea.classList.add('drag-over'); });
+cvDropArea.addEventListener('dragleave', () => cvDropArea.classList.remove('drag-over'));
+cvDropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  cvDropArea.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.toLowerCase().endsWith('.pdf')) handleCVFile(f);
+  else showCVStatus('error', 'Please drop a PDF file.');
+});
+
+async function handleCVFile(file) {
+  parsedFile = file;
+  document.getElementById('cv-drop-title').textContent = file.name;
+  cvDropArea.classList.add('has-file');
+  showCVStatus('loading', 'Reading your CV — this takes a second…');
+
+  const fd = new FormData();
+  fd.append('resume', file);
+
+  try {
+    const resp = await fetch(`/jobs/${JOB_ID}/parse-resume`, { method: 'POST', body: fd });
+    const data = await resp.json();
+
+    if (!data.ok) {
+      showCVStatus('error', data.error || 'Could not read your CV. Fill in manually below.');
+      return;
+    }
+
+    const filled = fillFields(data.fields || {});
+
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(parsedFile);
+      document.getElementById('resume-input').files = dt.files;
+      document.getElementById('resume-label').textContent = file.name;
+      document.getElementById('resume-drop').classList.add('file-selected');
+    } catch(e) {}
+
+    showCVStatus('success',
+      filled > 0
+        ? filled + ' field' + (filled !== 1 ? 's' : '') + ' filled — review below before submitting.'
+        : 'CV uploaded. We could not extract text — please fill in the details below.'
+    );
+
+    setTimeout(() => {
+      document.querySelector('.apply-section-label').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+  } catch(e) {
+    showCVStatus('error', 'Upload failed. Check your connection and try again.');
+  }
+}
+
+function fillFields(f) {
+  const map = [
+    ['name',             'f-name'],
+    ['email',            'f-email'],
+    ['phone',            'f-phone'],
+    ['location',         'f-location'],
+    ['skills',           'f-skills'],
+    ['years_experience', 'f-exp'],
+    ['education',        'f-edu'],
+    ['projects',         'projects'],
+  ];
+  let count = 0;
+  map.forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el && f[key] !== undefined && String(f[key]) !== '') {
+      el.value = f[key];
+      el.classList.add('autofilled');
+      count++;
+    }
+  });
+  if (f.education_level) {
+    const sel = document.getElementById('f-edu-level');
+    const opt = [...sel.options].find(o => o.value === f.education_level);
+    if (opt) { sel.value = f.education_level; sel.classList.add('autofilled'); count++; }
+  }
+  const pf = document.getElementById('projects');
+  if (pf) pf.dispatchEvent(new Event('input'));
+  return count;
+}
+
+function showCVStatus(type, msg) {
+  cvStatus.style.display = '';
+  cvStatus.className = 'cv-parse-status cv-status-' + type;
+  const icons = {
+    loading: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>',
+    success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    error:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  };
+  cvStatus.innerHTML = (icons[type] || '') + '<span>' + msg + '</span>';
+}
+
+document.getElementById('resume-input').addEventListener('change', function() {
+  if (this.files[0]) {
+    document.getElementById('resume-label').textContent = this.files[0].name;
+    document.getElementById('resume-drop').classList.add('file-selected');
+  }
+});
+
+const pf = document.getElementById('projects');
+const ph = document.getElementById('project-count-hint');
+if (pf && ph) {
+  pf.addEventListener('input', function() {
+    const n = this.value.split('\n').filter(l => l.trim()).length;
+    ph.textContent = n + ' project' + (n !== 1 ? 's' : '') + ' detected';
+  });
+}
+
+document.getElementById('apply-form').addEventListener('submit', function() {
+  const btn = this.querySelector('button[type="submit"]');
+  if (btn && window.btnLoading) window.btnLoading(btn, true);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,338 @@
+{% extends "public/base.html" %}
+{% from "icons.html" import icon_zap, icon_shield, icon_target, icon_arrow_right, icon_briefcase, icon_map_pin %}
+
+{% block title %}{{ brand_name }} — Smart Candidate Screening{% endblock %}
+
+{% block content %}
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+
+  <div class="container hero-content">
+    <h1>
+      Find your best hire.
+      <span class="hero-line-accent">In minutes, not weeks.</span>
+    </h1>
+
+    <p class="hero-sub">
+      Mpact scores every applicant across four dimensions, surfaces your top candidates
+      with full score breakdowns, and puts the final decision exactly where it belongs — with you.
+    </p>
+
+    <div class="hero-actions">
+      <a href="{{ url_for('public.jobs_list') }}" class="btn btn-xl btn-hero-primary">
+        <span class="btn-text">Browse Open Roles</span>
+        {{ icon_arrow_right() }}
+      </a>
+      <a href="{{ url_for('admin_auth.login') }}" class="btn btn-xl btn-hero-outline">
+        Recruiter Dashboard →
+      </a>
+    </div>
+
+    <!-- Floating UI Mockup -->
+    <div class="hero-mockup">
+      <div class="hero-mockup-frame">
+        <div class="hero-mockup-bar">
+          <div class="hero-mockup-dot"></div>
+          <div class="hero-mockup-dot"></div>
+          <div class="hero-mockup-dot"></div>
+          <div class="hero-mockup-url">mpact.rw/recruiter/screening/results</div>
+        </div>
+        <div class="hero-mockup-content" id="mockup-cards">
+          <!-- filled by JS for animation -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Trust Numbers -->
+    <div class="trust-strip">
+      <div class="trust-item">
+        <div class="trust-number" data-count="{{ total_jobs }}">{{ total_jobs }}</div>
+        <div class="trust-label">Open Roles</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-number" data-count="{{ total_applicants }}">{{ total_applicants }}</div>
+        <div class="trust-label">Applications</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-number" data-count="4">4</div>
+        <div class="trust-label">Score Dimensions</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-number">&lt;5s</div>
+        <div class="trust-label">Batch Screening</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-number">100%</div>
+        <div class="trust-label">Full Transparency</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ HOW IT WORKS ═══════════ -->
+<section class="value-props">
+  <div class="container">
+    <div style="text-align:center" class="reveal">
+      <h5>How It Works</h5>
+      <h2 style="margin-top:8px;margin-bottom:4px">From JD to shortlist in three steps</h2>
+      <p class="text-secondary" style="max-width:480px;margin:10px auto 0;font-size:.95rem">
+        Built for African hiring teams. Transparent, configurable, bias-aware.
+      </p>
+    </div>
+
+    <div class="value-grid">
+      <div class="card value-card reveal reveal-delay-1">
+        <div class="value-step" data-num="1">Collect</div>
+        <div class="value-icon">{{ icon_briefcase() }}</div>
+        <h3>Post &amp; Collect</h3>
+        <p>Publish jobs with skill requirements, experience levels, and education expectations. Candidates apply directly — no login needed. Or import from CSV.</p>
+      </div>
+
+      <div class="card value-card reveal reveal-delay-2">
+        <div class="value-step" data-num="2">Analyse</div>
+        <div class="value-icon" style="background:var(--success-bg);color:var(--success)">{{ icon_zap() }}</div>
+        <h3>Screen &amp; Score</h3>
+        <p>Every candidate is evaluated simultaneously across skills, experience, education, and projects — with configurable weights per role. Done in seconds, not hours.</p>
+      </div>
+
+      <div class="card value-card reveal reveal-delay-3">
+        <div class="value-step" data-num="3">Decide</div>
+        <div class="value-icon" style="background:var(--warn-bg);color:var(--warn)">{{ icon_target() }}</div>
+        <h3>Shortlist &amp; Decide</h3>
+        <p>Ranked candidate cards show score breakdowns, written strengths, gaps, reviewer notes, and bias flags — giving recruiters full context for every decision.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FEATURED JOBS ═══════════ -->
+{% if featured %}
+<section class="featured-section" style="background:var(--bg-inset)">
+  <div class="container">
+    <div class="section-header reveal">
+      <div>
+        <h5>Featured Roles</h5>
+        <h2 style="margin-top:4px">Open positions</h2>
+      </div>
+      <a href="{{ url_for('public.jobs_list') }}" class="btn btn-secondary btn-sm">
+        View all {{ total_jobs }} {{ icon_arrow_right() }}
+      </a>
+    </div>
+    <div class="jobs-grid">
+      {% for job in featured %}
+      <a href="{{ url_for('public.job_detail', job_id=job.id) }}"
+         class="card card-clickable job-card reveal reveal-delay-{{ loop.index if loop.index <= 4 else 4 }}"
+         style="text-decoration:none;color:inherit">
+        <div class="card-body">
+          <div style="margin-bottom:10px">
+            <div class="job-card-title">{{ job.title }}</div>
+            <div class="job-card-meta">{{ job.meta_line }}</div>
+          </div>
+          <div class="job-card-skills">
+            {% for skill in job.skills_list[:4] %}
+            <span class="tag">{{ skill }}</span>
+            {% endfor %}
+            {% if job.skills_list|length > 4 %}
+            <span class="tag">+{{ job.skills_list|length - 4 }}</span>
+            {% endif %}
+          </div>
+          <div class="job-card-footer">
+            <span class="job-card-count">{{ icon_map_pin() }} {{ job.short_location }}</span>
+            <span class="text-sm font-medium text-accent">Apply {{ icon_arrow_right() }}</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ═══════════ DIFFERENTIATORS ═══════════ -->
+<section style="padding:80px 0">
+  <div class="container">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center">
+      <div class="reveal">
+        <h5 style="color:var(--accent)">Why Mpact Is Different</h5>
+        <h2 style="margin-top:10px;margin-bottom:16px">Built for fairness, not just speed</h2>
+        <p class="text-secondary" style="line-height:1.75;margin-bottom:24px">
+          Every score is explainable. Weights are tunable per job. AI reasoning is shown alongside
+          deterministic metrics. Bias flags alert recruiters to potential unconscious bias in the
+          screening — keeping humans in control of every final decision.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="flex items-center gap-sm reveal reveal-delay-1">
+            <div style="width:34px;height:34px;background:var(--success-bg);color:var(--success);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ icon_shield() }}</div>
+            <div>
+              <div class="font-semibold text-sm">Bias-Aware Screening</div>
+              <div class="text-xs text-secondary">AI flags potential unconscious bias signals per candidate</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-sm reveal reveal-delay-2">
+            <div style="width:34px;height:34px;background:var(--accent-subtle);color:var(--accent);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ icon_zap() }}</div>
+            <div>
+              <div class="font-semibold text-sm">Simultaneous Evaluation</div>
+              <div class="text-xs text-secondary">All candidates reviewed at once — results in seconds, not hours</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-sm reveal reveal-delay-3">
+            <div style="width:34px;height:34px;background:var(--warn-bg);color:var(--warn);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ icon_target() }}</div>
+            <div>
+              <div class="font-semibold text-sm">Configurable Weights</div>
+              <div class="text-xs text-secondary">Skills, experience, education, projects — tune per role</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score visualization demo -->
+      <div class="reveal reveal-delay-2">
+        <div class="card" style="padding:28px">
+          <div class="flex justify-between items-center" style="margin-bottom:20px">
+            <div>
+              <div class="font-semibold" style="margin-bottom:2px">Alice Uwase</div>
+              <div class="text-xs text-secondary">Senior Backend Engineer</div>
+            </div>
+            <span class="badge badge-success">Strong Fit</span>
+          </div>
+
+          <!-- Score ring demo -->
+          <div class="flex items-center gap-lg" style="margin-bottom:20px">
+            <div class="score-ring" style="width:80px;height:80px">
+              <svg width="80" height="80" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg-inset)" stroke-width="8"/>
+                <circle cx="40" cy="40" r="32" fill="none" stroke="var(--success)" stroke-width="8"
+                  stroke-dasharray="201" stroke-dashoffset="30" stroke-linecap="round"
+                  style="transition:stroke-dashoffset 1s var(--ease-bounce)"/>
+              </svg>
+              <div class="score-ring-label">
+                <span class="score-ring-value" style="color:var(--success)">85</span>
+                <span class="score-ring-sub">Final</span>
+              </div>
+            </div>
+            <div style="flex:1">
+              {% set demo_scores = [('Skills', 90, 'var(--success)'), ('Experience', 85, 'var(--success)'), ('Education', 70, 'var(--warn)'), ('Projects', 100, 'var(--success)')] %}
+              {% for label, val, color in demo_scores %}
+              <div class="flex items-center gap-sm" style="margin-bottom:8px">
+                <span style="width:72px;font-size:.72rem;font-weight:500;color:var(--text-tertiary);text-align:right">{{ label }}</span>
+                <div class="score-bar" style="flex:1">
+                  <div class="score-bar-fill demo-bar" style="width:{{ val }}%;background:{{ color }}"></div>
+                </div>
+                <span style="font-family:var(--font-mono);font-size:.72rem;font-weight:600;width:28px;text-align:right;color:{{ color }}">{{ val }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div style="background:var(--success-bg);border-radius:var(--r-md);padding:12px 14px">
+            <div class="text-xs font-semibold" style="color:var(--success);margin-bottom:4px">Evaluation Notes</div>
+            <div class="text-xs text-secondary" style="font-style:italic;line-height:1.6">
+              "Alice demonstrates strong Node.js and PostgreSQL expertise aligned with the role's core requirements.
+              Her 6-year tenure at Andela provides exactly the distributed systems depth needed."
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ CTA ═══════════ -->
+<section style="padding:72px 0;background:#09090B;position:relative;overflow:hidden">
+  <div style="position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent 5%,rgba(99,102,241,.85) 30%,rgba(167,139,250,.65) 70%,transparent 95%);z-index:1"></div>
+  <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.10) 1px,transparent 1px);background-size:28px 28px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,#000 20%,transparent 100%)"></div>
+  <div class="container-narrow" style="text-align:center;position:relative;z-index:1">
+    <div class="reveal">
+      <h5 style="color:rgba(255,255,255,.5)">Ready to Screen Smarter?</h5>
+      <h2 style="color:#fff;margin-top:8px;margin-bottom:12px;font-size:2rem">
+        Cut screening time by 80%.<br>Keep humans in control.
+      </h2>
+      <p style="color:rgba(255,255,255,.6);max-width:440px;margin:0 auto 32px;line-height:1.7">
+        Post a job, collect applications, and let Mpact do the heavy lifting.
+        Review AI-ranked candidates with full score transparency.
+      </p>
+      <div class="flex gap-sm justify-center flex-wrap">
+        <a href="{{ url_for('admin_auth.login') }}" class="btn btn-xl btn-hero-primary">
+          <span class="btn-text">Open Recruiter Dashboard</span>
+          {{ icon_arrow_right() }}
+        </a>
+        <a href="{{ url_for('public.jobs_list') }}" class="btn btn-xl btn-hero-outline">
+          Browse Jobs
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Scroll reveal ── */
+const revealEls = document.querySelectorAll('.reveal, .reveal-scale');
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+}, { threshold: 0.12 });
+revealEls.forEach(el => obs.observe(el));
+
+/* ── Animated counter ── */
+function animateCount(el, target, duration) {
+  let start = 0;
+  const step = target / (duration / 16);
+  const timer = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.textContent = Math.floor(start);
+    if (start >= target) clearInterval(timer);
+  }, 16);
+}
+document.querySelectorAll('[data-count]').forEach(el => {
+  const target = parseInt(el.dataset.count, 10);
+  if (!target) return;
+  const countObs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { animateCount(el, target, 1200); countObs.disconnect(); }
+  }, { threshold: 0.5 });
+  countObs.observe(el);
+});
+
+/* ── Hero mockup animation ── */
+const candidates = [
+  { name: "Alice Uwase",   role: "Backend Eng",    score: 91, pct: 91, badge: "Strong Fit",  cls: "strong", color: "#10B981" },
+  { name: "Patrick M.",    role: "Data Scientist",  score: 78, pct: 78, badge: "Good Fit",    cls: "fit",    color: "#3B82F6" },
+  { name: "Diane Kagame",  role: "Frontend Dev",    score: 64, pct: 64, badge: "Maybe",       cls: "maybe",  color: "#F59E0B" },
+];
+const mockup = document.getElementById('mockup-cards');
+if (mockup) {
+  mockup.innerHTML = candidates.map(c => `
+    <div class="hero-candidate-card">
+      <div class="hero-cand-top">
+        <div class="avatar avatar-sm" style="background:rgba(99,91,255,.2);color:#A78BFA;font-weight:700;font-size:.68rem">${c.name.split(' ').map(p=>p[0]).join('')}</div>
+        <div>
+          <div class="hero-cand-name">${c.name}</div>
+          <div class="hero-cand-role">${c.role}</div>
+        </div>
+      </div>
+      <div class="hero-cand-score" style="color:${c.color}">${c.score}</div>
+      <div class="hero-cand-bar">
+        <div class="hero-cand-bar-fill" style="width:0%;background:${c.color}" data-w="${c.pct}"></div>
+      </div>
+      <span class="hero-cand-badge ${c.cls}">${c.badge}</span>
+    </div>
+  `).join('');
+  // Animate bars after mount
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.hero-cand-bar-fill').forEach(b => {
+      setTimeout(() => { b.style.width = b.dataset.w + '%'; }, 600);
+    });
+  });
+}
+
+/* ── Nav scroll shadow ── */
+const nav = document.querySelector('.nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 10);
+}, { passive: true });
+</script>
+{% endblock %}

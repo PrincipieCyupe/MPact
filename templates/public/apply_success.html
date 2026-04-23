@@ -1,0 +1,21 @@
+{% extends "public/base.html" %}
+{% from "icons.html" import icon_check_circle, icon_arrow_right %}
+
+{% block title %}Application Submitted — {{ brand_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="apply-success" style="padding:80px 24px">
+    <div class="apply-success-icon">
+      {{ icon_check_circle() }}
+    </div>
+    <h2>Application submitted</h2>
+    <p class="text-secondary" style="margin-top:8px;margin-bottom:8px">Thanks, {{ applicant.full_name }}! Your application for <strong>{{ job.title }}</strong> has been received.</p>
+    <p class="text-tertiary text-sm" style="margin-bottom:28px">Our team will review your profile and reach out if there's a match.</p>
+    <div class="flex gap-sm justify-center">
+      <a href="{{ url_for('public.jobs_list') }}" class="btn btn-primary">Browse more roles {{ icon_arrow_right() }}</a>
+      <a href="{{ url_for('public.job_detail', job_id=job.id) }}" class="btn btn-secondary">Back to job</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

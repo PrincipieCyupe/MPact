@@ -1,0 +1,23 @@
+{% from "icons.html" import logo %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Not Found — {{ brand_name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center">
+  <div style="padding:24px">
+    <div style="margin-bottom:24px">{{ logo(40) }}</div>
+    <h1 style="font-size:4rem;color:var(--text-tertiary);margin-bottom:8px">404</h1>
+    <h3 style="margin-bottom:8px">{{ message or 'Page not found' }}</h3>
+    <p class="text-secondary text-sm" style="margin-bottom:24px">The page you're looking for doesn't exist or has been moved.</p>
+    <div class="flex gap-sm justify-center">
+      <a href="{{ url_for('public.landing') }}" class="btn btn-primary">Go Home</a>
+      <a href="{{ url_for('public.jobs_list') }}" class="btn btn-secondary">Browse Jobs</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,214 @@
+{% from "icons.html" import logo %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account — {{ brand_name }} Recruiter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23635BFF'/><path d='M9 16.5L14 21.5L23 10.5' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+</head>
+<body class="auth-body">
+  <div class="auth-shell">
+
+    <!-- Left brand panel -->
+    <div class="auth-panel-left">
+      <div class="auth-panel-glow"></div>
+      <div class="auth-panel-grid"></div>
+      <div class="auth-panel-inner">
+        <a href="{{ url_for('public.landing') }}" class="auth-logo-link">
+          {{ logo(32) }}
+          <span class="auth-logo-name">{{ brand_name }}</span>
+        </a>
+        <div class="auth-panel-copy">
+          <h2 class="auth-panel-headline">Hire smarter.<br>Decide faster.</h2>
+          <p class="auth-panel-sub">Create your free recruiter account and start screening applicants in minutes — no setup required.</p>
+        </div>
+        <div class="auth-steps">
+          <div class="auth-step">
+            <div class="auth-step-num">1</div>
+            <div>
+              <div class="auth-step-title">Create your account</div>
+              <div class="auth-step-desc">Name, email, password — done in 30 seconds</div>
+            </div>
+          </div>
+          <div class="auth-step">
+            <div class="auth-step-num">2</div>
+            <div>
+              <div class="auth-step-title">Verify your email</div>
+              <div class="auth-step-desc">Click the link we send to your inbox</div>
+            </div>
+          </div>
+          <div class="auth-step">
+            <div class="auth-step-num">3</div>
+            <div>
+              <div class="auth-step-title">Post jobs &amp; screen</div>
+              <div class="auth-step-desc">AI ranks every applicant — you decide</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right form panel -->
+    <div class="auth-panel-right">
+      <div class="auth-form-wrap">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div style="margin-bottom:20px">
+          {% for cat, msg in messages %}
+          <div class="auth-alert auth-alert-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="auth-form-header">
+          <h1 class="auth-form-title">Create your account</h1>
+          <p class="auth-form-sub">Free to get started. No credit card needed.</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin_auth.register') }}" class="auth-form">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Full name <span class="required-star">*</span></label>
+              <input type="text" name="name" class="form-input"
+                     placeholder="Aline Uwase"
+                     value="{{ name }}" required autofocus>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Company / Organisation</label>
+              <input type="text" name="company" class="form-input"
+                     placeholder="Acme Ltd (optional)"
+                     value="{{ company }}">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Work email <span class="required-star">*</span></label>
+            <input type="email" name="email" class="form-input"
+                   placeholder="you@company.com"
+                   value="{{ email }}" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Password <span class="required-star">*</span></label>
+              <div class="pw-wrap">
+                <input type="password" name="password" id="pw" class="form-input pw-input"
+                       placeholder="Min. 8 characters" required minlength="8">
+                <button type="button" class="pw-toggle" onclick="togglePw('pw',this)" aria-label="Show password" tabindex="-1">
+                  <svg class="eye-show" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="eye-hide" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm password <span class="required-star">*</span></label>
+              <div class="pw-wrap">
+                <input type="password" name="confirm" id="pw2" class="form-input pw-input"
+                       placeholder="Repeat password" required>
+                <button type="button" class="pw-toggle" onclick="togglePw('pw2',this)" aria-label="Show password" tabindex="-1">
+                  <svg class="eye-show" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="eye-hide" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="auth-strength" id="pw-strength" style="display:none">
+            <div class="auth-strength-bar">
+              <div class="auth-strength-fill" id="pw-fill"></div>
+            </div>
+            <span class="auth-strength-label" id="pw-label"></span>
+          </div>
+
+          <button type="submit" class="btn btn-primary auth-submit-btn" id="submit-btn">
+            <span class="btn-text">Create account — verify email next</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+
+          <p class="auth-terms">
+            By creating an account you agree to our
+            <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+          </p>
+        </form>
+
+        <div class="auth-divider"><span>Already have an account?</span></div>
+
+        <a href="{{ url_for('admin_auth.login') }}" class="auth-alt-btn">
+          Sign in instead
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <style>
+  .pw-wrap { position:relative; }
+  .pw-input { padding-right: 44px; }
+  .pw-toggle {
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    background:none; border:none; cursor:pointer; padding:4px;
+    color:var(--text-tertiary); display:flex; align-items:center;
+    transition:color var(--t-fast);
+  }
+  .pw-toggle:hover { color:var(--text-secondary); }
+  </style>
+  <script>
+  function togglePw(id, btn) {
+    const inp = document.getElementById(id);
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.querySelector('.eye-show').style.display = show ? 'none' : '';
+    btn.querySelector('.eye-hide').style.display = show ? '' : 'none';
+  }
+
+  const pw = document.getElementById('pw');
+  const pw2 = document.getElementById('pw2');
+  const strengthBar = document.getElementById('pw-strength');
+  const fill = document.getElementById('pw-fill');
+  const label = document.getElementById('pw-label');
+
+  pw.addEventListener('input', function() {
+    const val = this.value;
+    if (!val) { strengthBar.style.display = 'none'; return; }
+    strengthBar.style.display = 'flex';
+    let score = 0;
+    if (val.length >= 8)  score++;
+    if (val.length >= 12) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const levels = [
+      { w: '20%',  color: '#DC2626', text: 'Very weak' },
+      { w: '40%',  color: '#F97316', text: 'Weak' },
+      { w: '60%',  color: '#EAB308', text: 'Fair' },
+      { w: '80%',  color: '#22C55E', text: 'Good' },
+      { w: '100%', color: '#059669', text: 'Strong' },
+    ];
+    const lvl = levels[Math.min(score, 4)];
+    fill.style.width = lvl.w;
+    fill.style.background = lvl.color;
+    label.textContent = lvl.text;
+    label.style.color = lvl.color;
+  });
+
+  document.querySelector('form').addEventListener('submit', function(e) {
+    if (pw.value !== pw2.value) {
+      e.preventDefault();
+      pw2.style.borderColor = 'var(--danger)';
+      pw2.focus();
+    }
+  });
+  pw2.addEventListener('input', function() {
+    this.style.borderColor = this.value === pw.value ? 'var(--success)' : 'var(--danger)';
+  });
+  </script>
+</body>
+</html>

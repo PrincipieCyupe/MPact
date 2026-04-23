@@ -1,0 +1,132 @@
+{% extends "admin/base.html" %}
+{% from "icons.html" import icon_bar_chart, icon_arrow_right, empty_applicants_svg %}
+
+{% block title %}{{ job.title }}{% endblock %}
+
+{% block content %}
+<div>
+  <a href="{{ url_for('admin_jobs.jobs_list') }}" class="text-sm text-secondary" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:16px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    All jobs
+  </a>
+
+  <div class="flex justify-between items-start" style="margin-bottom:24px">
+    <div>
+      <h2 style="margin-bottom:4px">{{ job.title }}</h2>
+      <p class="text-secondary">{{ job.meta_line }}</p>
+      <div class="flex gap-sm mt-sm">
+        {% if job.is_published %}
+        <span class="badge badge-success"><span class="status-dot success"></span> Published</span>
+        {% else %}
+        <span class="badge badge-muted"><span class="status-dot muted"></span> Draft</span>
+        {% endif %}
+        <span class="badge badge-info">{{ job.applicant_count }} applicant{{ 's' if job.applicant_count != 1 }}</span>
+        {% if job.screened_count > 0 %}
+        <span class="badge badge-success">{{ job.screened_count }} screened</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="flex gap-sm flex-wrap">
+      <a href="{{ url_for('admin_screening.index', job_id=job.id) }}" class="btn btn-primary btn-sm">{{ icon_bar_chart() }} Screen</a>
+      <a href="{{ url_for('admin_jobs.import_csv', job_id=job.id) }}" class="btn btn-secondary btn-sm">📂 Import CSV</a>
+      <a href="{{ url_for('admin_jobs.job_edit', job_id=job.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+    </div>
+  </div>
+
+  {% if job.skills_list %}
+  <div class="flex flex-wrap gap-xs mb-md">
+    {% for skill in job.skills_list %}
+    <span class="tag tag-accent">{{ skill }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <hr class="divider">
+
+  <div class="section-header">
+    <h3>Applications ({{ applicants|length }})</h3>
+    {% if job.screened_count > 0 %}
+    <a href="{{ url_for('admin_screening.results', job_id=job.id) }}" class="btn btn-ghost btn-sm">View ranked results {{ icon_arrow_right() }}</a>
+    {% endif %}
+  </div>
+
+  {% if applicants %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Candidate</th>
+          <th>Skills</th>
+          <th>Experience</th>
+          <th>Score</th>
+          <th>Match</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in applicants %}
+        <tr class="applicant-row" data-applicant-id="{{ a.id }}" onclick="openDrawer({{ a.id }})">
+          <td>
+            <div class="applicant-info">
+              <div class="avatar avatar-sm" style="background:{{ a.avatar_bg }};color:{{ a.avatar_color }}">{{ a.initials }}</div>
+              <div>
+                <div class="td-primary">{{ a.full_name }}</div>
+                <div class="td-meta">{{ a.email or '' }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;flex-wrap:wrap;gap:3px;max-width:200px">
+              {% for s in a.skills_list[:3] %}
+              <span class="tag" style="font-size:.72rem;padding:2px 6px">{{ s }}</span>
+              {% endfor %}
+              {% if a.skills_list|length > 3 %}
+              <span class="tag" style="font-size:.72rem;padding:2px 6px">+{{ a.skills_list|length - 3 }}</span>
+              {% endif %}
+            </div>
+          </td>
+          <td class="text-sm">{{ a.years_experience|int }} yr{{ 's' if a.years_experience != 1 }}</td>
+          <td>
+            {% if a.final_score is not none %}
+            <span class="score-value {{ 'high' if a.final_score >= 75 else ('mid' if a.final_score >= 50 else 'low') }}">{{ a.final_score|round(1) }}</span>
+            {% else %}
+            <span class="text-tertiary">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if a.ai_recommendation %}
+            <span class="badge badge-{{ a.recommendation_tone }}">{{ a.recommendation_label }}</span>
+            {% if a.bias_flag %}
+            <span class="bias-flag" style="margin-left:4px" title="{{ a.bias_notes or 'Bias signal' }}">⚠</span>
+            {% endif %}
+            {% else %}
+            <span class="badge badge-muted">Unscreened</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge status-badge badge-{{ 'success' if a.status == 'shortlisted' else ('info' if a.status == 'reviewed' else ('danger' if a.status == 'rejected' else 'muted')) }}">
+              <span class="status-dot {{ 'new' if a.status == 'new' else a.status }}"></span>
+              {{ a.status|capitalize }}
+            </span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openDrawer({{ a.id }})">View</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state card" style="padding:48px">
+    {{ empty_applicants_svg() }}
+    <h3>No applications yet</h3>
+    <p>Share the job listing to start receiving applications.</p>
+    <a href="{{ url_for('public.job_detail', job_id=job.id) }}" class="btn btn-secondary btn-sm mt-sm" target="_blank">View public listing {{ icon_arrow_right() }}</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

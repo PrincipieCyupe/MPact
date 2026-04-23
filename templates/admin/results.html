@@ -1,0 +1,341 @@
+{% extends "admin/base.html" %}
+{% from "icons.html" import icon_award, icon_arrow_right, icon_download, icon_check_circle, empty_results_svg %}
+
+{% block title %}Results — {{ job.title }}{% endblock %}
+
+{% block content %}
+<!-- Back link -->
+<a href="{{ url_for('admin_screening.index', job_id=job.id) }}"
+   class="text-sm text-secondary" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:20px">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+  Back to screening
+</a>
+
+<!-- Results header -->
+<div class="results-header">
+  <div>
+    <h5>Screening Results</h5>
+    <h2 style="margin-top:4px">{{ job.title }}</h2>
+    <p class="text-secondary text-sm" style="margin-top:4px">
+      Top {{ limit }} candidates · ranked by fit score
+    </p>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end">
+    <!-- Limit filters -->
+    <div class="results-filters">
+      <a href="{{ url_for('admin_screening.results', job_id=job.id, limit=10) }}"
+         class="btn {{ 'btn-primary' if limit == 10 else 'btn-secondary' }} btn-sm">Top 10</a>
+      <a href="{{ url_for('admin_screening.results', job_id=job.id, limit=20) }}"
+         class="btn {{ 'btn-primary' if limit == 20 else 'btn-secondary' }} btn-sm">Top 20</a>
+      <a href="{{ url_for('admin_screening.results', job_id=job.id, limit=50) }}"
+         class="btn {{ 'btn-primary' if limit == 50 else 'btn-secondary' }} btn-sm">Top 50</a>
+    </div>
+    <!-- Export -->
+    {% if ranked %}
+    <a href="{{ url_for('admin_screening.export_csv', job_id=job.id, limit=limit) }}"
+       class="btn btn-secondary btn-sm">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export CSV
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{% if ranked %}
+
+<!-- Summary pills -->
+{% set strong  = ranked|selectattr('ai_recommendation','equalto','strong_fit')|list|length %}
+{% set fit     = ranked|selectattr('ai_recommendation','equalto','fit')|list|length %}
+{% set maybe   = ranked|selectattr('ai_recommendation','equalto','maybe')|list|length %}
+{% set notfit  = ranked|selectattr('ai_recommendation','equalto','not_fit')|list|length %}
+{% set biased  = ranked|selectattr('bias_flag')|list|length %}
+
+<div class="summary-pills">
+  <div class="summary-pill">
+    <span class="status-dot success"></span>
+    <span class="pill-count" style="color:var(--success)">{{ strong }}</span>
+    <span class="text-sm">Strong Fit</span>
+  </div>
+  <div class="summary-pill">
+    <span class="status-dot info"></span>
+    <span class="pill-count" style="color:var(--info)">{{ fit }}</span>
+    <span class="text-sm">Good Fit</span>
+  </div>
+  <div class="summary-pill">
+    <span class="status-dot warn"></span>
+    <span class="pill-count" style="color:var(--warn)">{{ maybe }}</span>
+    <span class="text-sm">Maybe</span>
+  </div>
+  <div class="summary-pill">
+    <span class="status-dot danger"></span>
+    <span class="pill-count" style="color:var(--danger)">{{ notfit }}</span>
+    <span class="text-sm">Not a Fit</span>
+  </div>
+  {% if biased > 0 %}
+  <div class="summary-pill" style="border-color:var(--warn);background:var(--warn-bg)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span class="pill-count" style="color:var(--warn)">{{ biased }}</span>
+    <span class="text-sm">Bias Flags</span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Bulk action bar -->
+<div id="bulk-bar" class="bulk-bar">
+  <div class="flex items-center gap-sm">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    <span class="bulk-count" id="bulk-count">0 selected</span>
+  </div>
+  <div class="bulk-actions">
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3)"
+            onclick="bulkAction('shortlisted')">
+      Shortlist Selected
+    </button>
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2)"
+            onclick="bulkAction('rejected')">
+      Reject Selected
+    </button>
+    <button class="btn btn-icon btn-sm" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2)"
+            onclick="clearSelection()" title="Clear selection">✕</button>
+  </div>
+</div>
+
+<!-- Ranked candidate cards -->
+<div class="rank-cards" id="rank-cards">
+  {% for a in ranked %}
+  {% set medal_cls = 'gold' if loop.index == 1 else ('silver' if loop.index == 2 else ('bronze' if loop.index == 3 else 'plain')) %}
+  {% set ring_color = 'var(--success)' if a.final_score >= 75 else ('var(--warn)' if a.final_score >= 50 else 'var(--danger)') %}
+  {% set ring_offset = (1 - (a.final_score or 0) / 100) * 163 %}
+
+  <div class="rank-card rank-{{ loop.index if loop.index <= 3 else 'n' }}"
+       id="rank-card-{{ a.id }}"
+       data-applicant-id="{{ a.id }}"
+       onclick="handleCardClick(event, {{ a.id }})">
+
+    <div class="rank-card-inner">
+
+      <!-- Checkbox (appears on hover) -->
+      <div onclick="event.stopPropagation();" style="flex-shrink:0;opacity:0;transition:opacity .15s" class="card-checkbox-wrap">
+        <input type="checkbox" class="candidate-checkbox" data-id="{{ a.id }}"
+               style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer"
+               onclick="event.stopPropagation();onCheckboxChange()">
+      </div>
+
+      <!-- Rank medal -->
+      <div class="rank-medal {{ medal_cls }}">
+        {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+      </div>
+
+      <!-- Score ring -->
+      <div class="rank-score-ring score-ring" style="width:72px;height:72px;flex-shrink:0">
+        <svg width="72" height="72" viewBox="0 0 72 72">
+          <circle cx="36" cy="36" r="26" fill="none" stroke="var(--bg-inset)" stroke-width="7"/>
+          <circle cx="36" cy="36" r="26" fill="none" stroke="{{ ring_color }}" stroke-width="7"
+                  stroke-dasharray="163" stroke-dashoffset="{{ ring_offset|round(1) }}"
+                  stroke-linecap="round" class="ring-arc"/>
+        </svg>
+        <div class="score-ring-label">
+          <span class="score-ring-value" style="color:{{ ring_color }}">{{ (a.final_score or 0)|round(0)|int }}</span>
+          <span class="score-ring-sub">Score</span>
+        </div>
+      </div>
+
+      <!-- Candidate info -->
+      <div class="rank-cand-info">
+        <div class="flex items-center gap-sm" style="margin-bottom:4px;flex-wrap:wrap">
+          <div class="avatar avatar-md" style="background:{{ a.avatar_bg }};color:{{ a.avatar_color }};flex-shrink:0">{{ a.initials }}</div>
+          <div>
+            <div class="rank-cand-name">{{ a.full_name }}</div>
+            <div class="rank-cand-meta">
+              {{ a.location or '' }}{% if a.location and a.years_experience %} · {% endif %}{% if a.years_experience %}{{ a.years_experience|int }}yr exp{% endif %}
+            </div>
+          </div>
+          <span class="badge badge-{{ a.recommendation_tone }}" style="margin-left:4px">{{ a.recommendation_label }}</span>
+          {% if a.bias_flag %}
+          <span class="bias-flag" title="{{ a.bias_notes or 'Potential bias signal detected' }}">
+            ⚠ Bias flag
+          </span>
+          {% endif %}
+        </div>
+        <div class="rank-cand-skills">
+          {% for skill in a.skills_list[:5] %}
+          <span class="tag" style="font-size:.72rem;padding:2px 8px">{{ skill }}</span>
+          {% endfor %}
+          {% if a.skills_list|length > 5 %}
+          <span class="tag" style="font-size:.72rem;padding:2px 8px">+{{ a.skills_list|length - 5 }}</span>
+          {% endif %}
+        </div>
+
+        <!-- AI reasoning preview -->
+        {% if a.ai_reasoning %}
+        <div class="text-xs text-secondary" style="margin-top:8px;font-style:italic;line-height:1.5;max-width:500px">
+          "{{ a.ai_reasoning[:140] }}{% if a.ai_reasoning|length > 140 %}…{% endif %}"
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Score breakdown bars -->
+      <div class="rank-scores">
+        {% set bars = [
+          ('Skills', a.skills_score),
+          ('Exp', a.experience_score),
+          ('Edu', a.education_score),
+          ('Projects', a.projects_score),
+        ] %}
+        {% for label, val in bars %}
+        {% set bar_color = 'var(--success)' if val and val >= 75 else ('var(--warn)' if val and val >= 50 else 'var(--danger)') %}
+        <div class="rank-score-row">
+          <span class="rank-score-label">{{ label }}</span>
+          <div class="rank-score-bar">
+            <div class="rank-score-bar-fill" style="width:{{ (val or 0)|round(0)|int }}%;background:{{ bar_color }}"></div>
+          </div>
+          <span class="rank-score-val {{ 'high' if val and val >= 75 else ('mid' if val and val >= 50 else 'low') }}">{{ (val or 0)|round(0)|int }}</span>
+        </div>
+        {% endfor %}
+        <div style="border-top:1px solid var(--border-light);margin:6px 0"></div>
+        <div class="rank-score-row">
+          <span class="rank-score-label" style="color:var(--text-primary);font-weight:600">AI</span>
+          <div class="rank-score-bar">
+            <div class="rank-score-bar-fill" style="width:{{ (a.ai_score or 0)|round(0)|int }}%;background:var(--accent)"></div>
+          </div>
+          <span class="rank-score-val" style="color:var(--accent)">{{ (a.ai_score or 0)|round(0)|int }}</span>
+        </div>
+      </div>
+
+      <!-- Hover actions -->
+      <div class="rank-card-actions">
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openDrawer({{ a.id }})">
+          View Profile
+        </button>
+        {% if a.resume_filename %}
+        <a href="{{ url_for('admin_screening.download_resume', applicant_id=a.id) }}"
+           class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Resume
+        </a>
+        {% endif %}
+        <div class="flex gap-xs" onclick="event.stopPropagation()">
+          <button class="btn btn-sm btn-success" style="padding:4px 10px;font-size:.75rem"
+                  onclick="quickStatus({{ a.id }}, 'shortlisted', this)">✓ Shortlist</button>
+          <button class="btn btn-sm btn-ghost" style="padding:4px 10px;font-size:.75rem;color:var(--danger)"
+                  onclick="quickStatus({{ a.id }}, 'rejected', this)">✕</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state card" style="padding:64px">
+  {{ empty_results_svg() }}
+  <h3>No screening results yet</h3>
+  <p>Run candidate screening first to see ranked results.</p>
+  <a href="{{ url_for('admin_screening.index', job_id=job.id) }}" class="btn btn-primary btn-sm mt-sm">
+    Go to Screening
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const JOB_ID = {{ job.id }};
+let selectedIds = new Set();
+
+/* ── Checkbox & bulk select ─────────────────────────────────────── */
+document.querySelectorAll('.rank-card').forEach(card => {
+  card.addEventListener('mouseenter', () => {
+    card.querySelector('.card-checkbox-wrap').style.opacity = '1';
+  });
+  card.addEventListener('mouseleave', () => {
+    const cb = card.querySelector('.candidate-checkbox');
+    if (!cb.checked) card.querySelector('.card-checkbox-wrap').style.opacity = '0';
+  });
+});
+
+function onCheckboxChange() {
+  selectedIds.clear();
+  document.querySelectorAll('.candidate-checkbox:checked').forEach(cb => {
+    selectedIds.add(parseInt(cb.dataset.id));
+    cb.closest('.rank-card').style.outline = '2px solid var(--accent)';
+    cb.closest('.rank-card').style.outlineOffset = '-2px';
+  });
+  document.querySelectorAll('.candidate-checkbox:not(:checked)').forEach(cb => {
+    cb.closest('.rank-card').style.outline = '';
+    cb.closest('.rank-card').style.outlineOffset = '';
+  });
+  const bar = document.getElementById('bulk-bar');
+  const count = document.getElementById('bulk-count');
+  if (selectedIds.size > 0) {
+    bar.classList.add('visible');
+    count.textContent = selectedIds.size + ' selected';
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+function clearSelection() {
+  document.querySelectorAll('.candidate-checkbox').forEach(cb => { cb.checked = false; });
+  document.querySelectorAll('.rank-card').forEach(c => { c.style.outline = ''; c.style.outlineOffset = ''; c.querySelector('.card-checkbox-wrap').style.opacity = '0'; });
+  selectedIds.clear();
+  document.getElementById('bulk-bar').classList.remove('visible');
+}
+
+function bulkAction(status) {
+  if (!selectedIds.size) return;
+  const ids = [...selectedIds];
+  fetch(`/recruiter/screening/${JOB_ID}/bulk-status`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids, status })
+  }).then(r => r.json()).then(data => {
+    if (data.ok) {
+      window.adminToast(`${data.updated} candidate(s) marked as ${status}`, 'success');
+      clearSelection();
+      // Visual feedback on cards
+      ids.forEach(id => {
+        const card = document.getElementById('rank-card-' + id);
+        if (card && status === 'shortlisted') { card.style.background = 'var(--success-bg)'; }
+        if (card && status === 'rejected') { card.style.opacity = '.5'; }
+      });
+    } else { window.adminToast(data.error || 'Bulk action failed', 'error'); }
+  }).catch(() => window.adminToast('Network error', 'error'));
+}
+
+function quickStatus(id, status, btn) {
+  btn.disabled = true;
+  fetch(`/recruiter/applicant/${id}/status`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  }).then(r => r.json()).then(data => {
+    btn.disabled = false;
+    if (data.ok) {
+      window.adminToast(`Marked as ${status}`, 'success');
+      if (status === 'shortlisted') btn.closest('.rank-card').style.borderLeft = '4px solid var(--success)';
+      if (status === 'rejected') { btn.closest('.rank-card').style.opacity = '.45'; btn.closest('.rank-card').style.pointerEvents = 'none'; }
+    } else { window.adminToast(data.error || 'Failed', 'error'); }
+  }).catch(() => { btn.disabled = false; window.adminToast('Network error', 'error'); });
+}
+
+function handleCardClick(e, id) {
+  // Don't open drawer if clicking on checkbox / action buttons
+  if (e.target.closest('.card-checkbox-wrap') || e.target.closest('.rank-card-actions')) return;
+  openDrawer(id);
+}
+
+/* ── Animate ring arcs on load ──────────────────────────────────── */
+requestAnimationFrame(() => {
+  document.querySelectorAll('.ring-arc').forEach(arc => {
+    const final = parseFloat(arc.getAttribute('stroke-dashoffset'));
+    arc.setAttribute('stroke-dashoffset', '163');
+    setTimeout(() => {
+      arc.style.transition = 'stroke-dashoffset .9s cubic-bezier(.4,0,.2,1)';
+      arc.setAttribute('stroke-dashoffset', final);
+    }, 100);
+  });
+});
+</script>
+{% endblock %}

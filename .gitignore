@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+instance/
+.env
+*.db
+*.sqlite
+.venv/
+venv/
+node_modules/
+.DS_Store
+testing.py
+.claude
+.env.example

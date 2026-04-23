@@ -1,0 +1,13 @@
+full_name,email,phone,location,skills,years_experience,education,projects,project_count
+Aline Uwase,aline.uwase@example.com,+250788111222,Kigali,"Python, Flask, PostgreSQL, Docker, REST APIs",5,BSc Computer Science University of Rwanda,"Built logistics dashboard, Built SMS payment gateway, Internal HR tool",3
+Eric Mugisha,eric.m@example.com,+250788333444,Kigali,"Python, Django, AWS, Redis, Celery",6,MSc Software Engineering CMU Africa,"E-commerce platform, Real-time analytics service, Microservices migration",3
+Patrick Niyonsaba,patrick.n@example.com,+250788555666,Remote,"JavaScript, React, Node.js, MongoDB",4,BSc Information Systems,"E-learning platform, Inventory app",2
+Diane Mukamana,diane.m@example.com,+250788777888,Kigali,"Python, Flask, SQL, Pandas, Machine Learning",3,BSc Data Science AUCA,"Loan default model, Recommendation engine, Twitter sentiment dashboard, Kaggle competitions",4
+Jean Bosco Habimana,jb.habimana@example.com,+250788999000,Kigali,"Java, Spring Boot, MySQL",2,Diploma in Software Development,"School management system",1
+Sarah Ingabire,sarah.i@example.com,+250789111222,Remote,"Python, FastAPI, PostgreSQL, Docker, Kubernetes, GCP",7,MSc Computer Science,"Fintech KYC platform, Open-source contributions to FastAPI, Kubernetes operator for ML workloads, Internal devops platform",4
+Kevin Ndayisaba,kevin.n@example.com,+250789333444,Kigali,"PHP, Laravel, MySQL",3,BSc IT,"Hotel booking site, Restaurant POS",2
+Grace Umutoni,grace.u@example.com,+250789555666,Kigali,"Python, Flask, REST APIs, Git, Linux, PostgreSQL",4,BSc Computer Engineering,"Telemedicine backend, Government data portal, Library system",3
+Eric Tuyishime,eric.t@example.com,+250789777888,Remote,"Go, gRPC, PostgreSQL, Docker",5,BSc Software Engineering,"Payment switching gateway, Microservices framework",2
+Linda Iradukunda,linda.i@example.com,+250789999000,Kigali,"Python, Flask, JavaScript, HTML, CSS",1,BSc Computer Science (in progress),"Personal blog, Class project",2
+Olivier Bizimana,olivier.b@example.com,+250788121212,Kigali,"Python, Flask, Pandas, NumPy, REST APIs, PostgreSQL, Redis, Docker",6,MSc Computer Science University of Rwanda,"Mobile money fraud detection, Bank reconciliation engine, Internal admin tools, Cloud migration",4
+Christine Mutesi,christine.m@example.com,+250788343434,Remote,"Java, Kotlin, Android",4,BSc IT,"Two Android apps in Play Store",2

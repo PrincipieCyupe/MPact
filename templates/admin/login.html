@@ -1,0 +1,132 @@
+{% from "icons.html" import logo %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — {{ brand_name }} Recruiter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23635BFF'/><path d='M9 16.5L14 21.5L23 10.5' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+</head>
+<body class="auth-body">
+  <div class="auth-shell">
+
+    <!-- Left brand panel -->
+    <div class="auth-panel-left">
+      <div class="auth-panel-glow"></div>
+      <div class="auth-panel-grid"></div>
+      <div class="auth-panel-inner">
+        <a href="{{ url_for('public.landing') }}" class="auth-logo-link">
+          {{ logo(32) }}
+          <span class="auth-logo-name">{{ brand_name }}</span>
+        </a>
+        <div class="auth-panel-copy">
+          <h2 class="auth-panel-headline">Your pipeline,<br>your decisions.</h2>
+          <p class="auth-panel-sub">Screen every applicant in seconds — with full score breakdowns, written evaluation notes, and bias flags so you stay in control.</p>
+        </div>
+        <div class="auth-feature-list">
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span>AI scores every applicant across 4 dimensions</span>
+          </div>
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span>Configurable weights per role</span>
+          </div>
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span>Bias-aware screening with full transparency</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right form panel -->
+    <div class="auth-panel-right">
+      <div class="auth-form-wrap">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div style="margin-bottom:20px">
+          {% for cat, msg in messages %}
+          <div class="auth-alert auth-alert-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="auth-form-header">
+          <h1 class="auth-form-title">Welcome back</h1>
+          <p class="auth-form-sub">Sign in to your recruiter account</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin_auth.login') }}{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}" class="auth-form">
+          <div class="form-group">
+            <label class="form-label">Email address</label>
+            <input type="email" name="email" class="form-input"
+                   placeholder="you@company.com"
+                   value="{{ email }}" required autofocus>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="pw-wrap">
+              <input type="password" name="password" id="pw-login" class="form-input pw-input"
+                     placeholder="Your password" required>
+              <button type="button" class="pw-toggle" onclick="togglePw('pw-login',this)" aria-label="Show password" tabindex="-1">
+                <svg class="eye-show" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-hide" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary auth-submit-btn">
+            <span class="btn-text">Sign in to Dashboard</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </form>
+
+        <div class="auth-divider"><span>New to {{ brand_name }}?</span></div>
+
+        <a href="{{ url_for('admin_auth.register') }}" class="auth-alt-btn">
+          Create a recruiter account
+        </a>
+
+        <p class="auth-footer-note">
+          Looking for jobs? <a href="{{ url_for('public.jobs_list') }}">Browse open roles →</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+<style>
+.pw-wrap { position:relative; }
+.pw-input { padding-right: 44px; }
+.pw-toggle {
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  background:none; border:none; cursor:pointer; padding:4px;
+  color:var(--text-tertiary); display:flex; align-items:center;
+  transition:color var(--t-fast);
+}
+.pw-toggle:hover { color:var(--text-secondary); }
+</style>
+<script>
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.querySelector('.eye-show').style.display = show ? 'none' : '';
+  btn.querySelector('.eye-hide').style.display = show ? '' : 'none';
+}
+</script>
+</body>
+</html>

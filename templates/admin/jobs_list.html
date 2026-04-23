@@ -1,0 +1,71 @@
+{% extends "admin/base.html" %}
+{% from "icons.html" import icon_plus, icon_arrow_right, empty_jobs_svg %}
+
+{% block title %}Jobs{% endblock %}
+
+{% block content %}
+<div class="section-header" style="margin-bottom:20px">
+  <div>
+    <h5>Manage</h5>
+    <h2 style="margin-top:4px">Job Listings</h2>
+  </div>
+  <a href="{{ url_for('admin_jobs.job_create') }}" class="btn btn-primary">{{ icon_plus() }} New Job</a>
+</div>
+
+{% if jobs %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Position</th>
+        <th>Department</th>
+        <th>Location</th>
+        <th>Applicants</th>
+        <th>Screened</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr style="cursor:pointer" onclick="location.href='{{ url_for('admin_jobs.job_detail', job_id=job.id) }}'">
+        <td>
+          <div class="td-primary">{{ job.title }}</div>
+          <div class="td-meta">{{ job.employment_type or '' }}{% if job.seniority %} · {{ job.seniority }}{% endif %}</div>
+        </td>
+        <td class="text-sm text-secondary">{{ job.department or '—' }}</td>
+        <td class="text-sm text-secondary">{{ job.short_location }}</td>
+        <td><span class="badge badge-info">{{ job.applicant_count }}</span></td>
+        <td>
+          {% if job.screened_count > 0 %}
+          <span class="badge badge-success">{{ job.screened_count }}</span>
+          {% else %}
+          <span class="badge badge-muted">0</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if job.is_published %}
+          <span class="badge badge-success"><span class="status-dot success"></span> Live</span>
+          {% else %}
+          <span class="badge badge-muted"><span class="status-dot muted"></span> Draft</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="row-actions">
+            <a href="{{ url_for('admin_jobs.job_edit', job_id=job.id) }}" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">Edit</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state card" style="padding:60px">
+  {{ empty_jobs_svg() }}
+  <h3>No jobs yet</h3>
+  <p>Create your first job listing to start receiving applications.</p>
+  <a href="{{ url_for('admin_jobs.job_create') }}" class="btn btn-primary mt-sm">{{ icon_plus() }} Create Job</a>
+</div>
+{% endif %}
+{% endblock %}

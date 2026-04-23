@@ -1,0 +1,67 @@
+{% from "icons.html" import logo, icon_briefcase, icon_search %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ brand_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23635BFF'/><path d='M9 16.5L14 21.5L23 10.5' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="{{ url_for('public.landing') }}" class="nav-brand">
+        {{ logo(28) }}
+        {{ brand_name }}
+      </a>
+      <div class="nav-links">
+        <a href="{{ url_for('public.jobs_list') }}" class="{% if request.path.startswith('/jobs') %}active{% endif %}">{{ icon_briefcase() }} Jobs</a>
+        <a href="{{ url_for('admin_auth.login') }}" class="btn btn-sm" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.14)">Recruiter Login</a>
+        <a href="{{ url_for('admin_auth.register') }}" class="btn btn-sm btn-primary">Get started</a>
+      </div>
+    </div>
+  </nav>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-messages">
+    {% for category, message in messages %}
+    <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div>
+          <div class="footer-brand">{{ brand_name }}</div>
+          <p class="footer-note">{{ brand_tagline }} Designed and built by {{ team_name }}.</p>
+        </div>
+        <div class="footer-links">
+          <h5>Platform</h5>
+          <a href="{{ url_for('public.jobs_list') }}">Browse Jobs</a>
+          <a href="{{ url_for('admin_auth.login') }}">Recruiter Dashboard</a>
+        </div>
+        <div class="footer-links">
+          <h5>About</h5>
+          <a href="#">Our Mission</a>
+          <a href="#">Team M&amp;P</a>
+        </div>
+      </div>
+      <div class="footer-bottom">&copy; 2026 {{ brand_name }}. Built with care in Kigali.</div>
+    </div>
+  </footer>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

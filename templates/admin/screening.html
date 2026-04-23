@@ -1,0 +1,475 @@
+{% extends "admin/base.html" %}
+{% from "icons.html" import icon_play, icon_settings, icon_zap, icon_arrow_right, empty_jobs_svg %}
+
+{% block title %}Screening{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px">
+  <h5>AI Screening</h5>
+  <h2 style="margin-top:4px">Screen Candidates</h2>
+</div>
+
+{% if not jobs %}
+<div class="empty-state card" style="padding:64px">
+  {{ empty_jobs_svg() }}
+  <h3>No jobs available</h3>
+  <p>Create a job listing before running screening.</p>
+  <a href="{{ url_for('admin_jobs.job_create') }}" class="btn btn-primary btn-sm mt-sm">Create Job</a>
+</div>
+{% else %}
+
+<!-- Job selector chips -->
+<div class="flex gap-sm flex-wrap mb-lg" style="padding-bottom:6px;border-bottom:1px solid var(--border-light)">
+  {% for j in jobs %}
+  <a href="{{ url_for('admin_screening.index', job_id=j.id) }}"
+     class="btn {{ 'btn-primary' if job and j.id == job.id else 'btn-secondary' }} btn-sm"
+     style="gap:8px">
+    {{ j.title }}
+    <span class="badge {{ 'badge-accent' if job and j.id == job.id else 'badge-muted' }}">{{ j.applicant_count }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+{% if job %}
+
+<!-- Tab bar: Run / Import CSV / JD Extract -->
+<div class="tab-bar" style="max-width:540px">
+  <button class="tab-btn active" onclick="switchTab('run', this)">{{ icon_play() }} Run Screening</button>
+  <button class="tab-btn" onclick="switchTab('import', this)">📂 Import CSV</button>
+  <button class="tab-btn" onclick="switchTab('jd', this)">✨ Extract JD</button>
+</div>
+
+<!-- ═══ TAB: RUN SCREENING ═══ -->
+<div id="tab-run" class="tab-pane active">
+  <div class="screening-layout">
+    <div class="screening-main">
+      <div class="card">
+        <div class="card-body">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 style="margin-bottom:4px">{{ job.title }}</h3>
+              <p class="text-secondary text-sm">
+                {{ job.meta_line }} · <strong>{{ job.applicant_count }}</strong> applicant{{ 's' if job.applicant_count != 1 }}
+              </p>
+            </div>
+            {% if job.screened_count > 0 %}
+            <a href="{{ url_for('admin_screening.results', job_id=job.id) }}" class="btn btn-ghost btn-sm">
+              View last results →
+            </a>
+            {% endif %}
+          </div>
+
+          {% if job.skills_list %}
+          <div class="flex flex-wrap gap-xs mt-md mb-sm">
+            {% for s in job.skills_list %}
+            <span class="tag tag-accent">{{ s }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <hr class="divider">
+
+          <div class="flex items-center gap-sm mb-sm" style="flex-wrap:wrap">
+            <div style="flex:1">
+              <p class="text-sm text-secondary">
+                This will evaluate all <strong>{{ job.applicant_count }}</strong> applicant(s) at once —
+                <strong>each candidate scored across four dimensions</strong> with written notes per person.
+                Potential bias signals are automatically flagged for review.
+              </p>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <button id="run-screening-btn" data-job-id="{{ job.id }}"
+                    class="btn btn-primary btn-lg" {% if job.applicant_count == 0 %}disabled{% endif %}>
+              {{ icon_zap() }}
+              <span class="btn-text">Screen Candidates</span>
+            </button>
+
+            {% if job.applicant_count == 0 %}
+            <p class="text-sm text-tertiary">No applicants yet. Share the job link to collect applications.</p>
+            {% else %}
+            <p class="text-xs text-tertiary">~5–15s for all candidates</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Fairness callout -->
+      <div class="card mt-md" style="border-left:3px solid var(--accent)">
+        <div class="card-body-sm">
+          <div class="flex items-start gap-sm">
+            <span style="font-size:1.2rem">🔍</span>
+            <div>
+              <h4 class="text-sm font-semibold" style="margin-bottom:4px">Transparent & Accountable</h4>
+              <p class="text-xs text-secondary" style="line-height:1.65">
+                Every score combines structured criteria (skills, experience, education, projects) with a holistic qualitative review.
+                Each recommendation comes with written reasoning so nothing is a black box.
+                Weights are fully configurable. Bias signals are flagged automatically. Recruiters make all final decisions.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent results link -->
+      {% if job.screened_count > 0 %}
+      <div class="card mt-md" style="background:var(--accent-subtle);border-color:var(--accent-light)">
+        <div class="card-body-sm flex justify-between items-center">
+          <div>
+            <span class="font-semibold text-sm" style="color:var(--accent)">Previous Screening Available</span>
+            <p class="text-xs text-secondary" style="margin-top:2px">{{ job.screened_count }} candidates screened · {{ job.shortlist_count }} shortlisted</p>
+          </div>
+          <a href="{{ url_for('admin_screening.results', job_id=job.id) }}" class="btn btn-primary btn-sm">
+            View Results {{ icon_arrow_right() }}
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Sidebar: Weight Configuration -->
+    <div class="screening-sidebar">
+      <div class="card">
+        <div class="card-body">
+          <div class="flex justify-between items-center" style="margin-bottom:16px">
+            <h4 style="display:flex;align-items:center;gap:6px">{{ icon_settings() }} Weights</h4>
+            <span class="text-sm text-secondary">
+              Total: <span id="weight-total" class="weight-total">100</span>%
+            </span>
+          </div>
+
+          <form method="POST" action="{{ url_for('admin_screening.update_weights', job_id=job.id) }}">
+            <div class="weight-slider-group">
+              <div class="weight-row">
+                <span class="weight-label">Skills</span>
+                <input type="range" name="weight_skills" class="weight-slider" min="0" max="100" step="5"
+                       value="{{ job.weight_skills }}" data-display="val-skills">
+                <span class="weight-value" id="val-skills">{{ job.weight_skills }}</span>
+              </div>
+              <div class="weight-row">
+                <span class="weight-label">Experience</span>
+                <input type="range" name="weight_experience" class="weight-slider" min="0" max="100" step="5"
+                       value="{{ job.weight_experience }}" data-display="val-experience">
+                <span class="weight-value" id="val-experience">{{ job.weight_experience }}</span>
+              </div>
+              <div class="weight-row">
+                <span class="weight-label">Education</span>
+                <input type="range" name="weight_education" class="weight-slider" min="0" max="100" step="5"
+                       value="{{ job.weight_education }}" data-display="val-education">
+                <span class="weight-value" id="val-education">{{ job.weight_education }}</span>
+              </div>
+              <div class="weight-row">
+                <span class="weight-label">Projects</span>
+                <input type="range" name="weight_projects" class="weight-slider" min="0" max="100" step="5"
+                       value="{{ job.weight_projects }}" data-display="val-projects">
+                <span class="weight-value" id="val-projects">{{ job.weight_projects }}</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-secondary btn-sm mt-md" style="width:100%">Save Weights</button>
+          </form>
+
+          <p class="text-xs text-tertiary mt-sm" style="line-height:1.6">
+            Weights must sum to 100%. They control the deterministic portion (60%) of the final blended score.
+          </p>
+        </div>
+      </div>
+
+      <!-- Score formula -->
+      <div class="card mt-sm">
+        <div class="card-body-sm">
+          <h5 style="margin-bottom:8px">Score Formula</h5>
+          <div class="text-xs text-secondary" style="font-family:var(--font-mono);line-height:2">
+            Final = Weighted × 0.6 + AI × 0.4<br>
+            Weighted = Σ(axis × weight) / 100
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB: IMPORT CSV ═══ -->
+<div id="tab-import" class="tab-pane">
+  <div class="card" style="max-width:680px">
+    <div class="card-body">
+      <div class="flex items-center gap-sm mb-md">
+        <span style="font-size:1.6rem">📊</span>
+        <div>
+          <h3 style="margin-bottom:2px">Import Applicants from CSV</h3>
+          <p class="text-sm text-secondary">Scenario 2: Screen candidates from external job boards</p>
+        </div>
+      </div>
+
+      <p class="text-sm text-secondary mb-md" style="line-height:1.65">
+        Upload a CSV file exported from LinkedIn, Indeed, or any ATS.
+        Mpact will parse each row and add them as applicants for <strong>{{ job.title }}</strong>.
+        Then run screening to rank them.
+      </p>
+
+      <!-- Column reference -->
+      <div style="margin-bottom:18px">
+        <h5 style="margin-bottom:8px">Expected CSV Columns (flexible — case-insensitive)</h5>
+        <div class="csv-columns-preview">
+          full_name, email, phone, location, skills, years_experience, education, education_level, projects
+        </div>
+        <p class="text-xs text-secondary">All columns are optional except <strong>full_name</strong>. Extra columns are ignored.</p>
+      </div>
+
+      <form method="POST" action="{{ url_for('admin_jobs.import_csv', job_id=job.id) }}" enctype="multipart/form-data">
+        <div class="file-drop" id="csv-drop" onclick="document.getElementById('csv-file').click()">
+          <input type="file" id="csv-file" name="csv_file" accept=".csv,.tsv" onchange="onFileSelected(this)">
+          <div class="file-drop-icon">📂</div>
+          <div class="file-drop-label" id="csv-file-label">Click to select CSV file</div>
+          <div class="file-drop-hint">or drag and drop · .csv or .tsv</div>
+        </div>
+
+        <div class="flex gap-sm mt-md">
+          <button type="submit" class="btn btn-primary" id="csv-import-btn">
+            <span class="btn-text">Import Applicants</span>
+          </button>
+          <a href="{{ url_for('admin_jobs.job_detail', job_id=job.id) }}" class="btn btn-secondary">
+            View Current Applicants
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB: JD EXTRACTION ═══ -->
+<div id="tab-jd" class="tab-pane">
+  <div class="card" style="max-width:680px">
+    <div class="card-body">
+      <div class="flex items-center gap-sm mb-md">
+        <span style="font-size:1.6rem">✨</span>
+        <div>
+          <h3 style="margin-bottom:2px">Auto-Extract Job Requirements</h3>
+          <p class="text-sm text-secondary">Paste any job description and the requirements will be extracted automatically</p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Job Description Text</label>
+        <textarea class="form-textarea" id="jd-input" rows="10" placeholder="Paste the full job description here...
+e.g. 'We are looking for a Senior Backend Engineer to join our growing team...
+Requirements: 5+ years of Node.js, PostgreSQL, AWS experience...'"></textarea>
+        <div class="form-hint">Minimum 50 characters. Title, skills, experience, education and more will be extracted.</div>
+      </div>
+
+      <button class="btn btn-primary" id="jd-extract-btn" onclick="extractJD()">
+        <span class="btn-text">✨ Extract requirements</span>
+      </button>
+
+      <!-- Results panel -->
+      <div id="jd-results" style="display:none;margin-top:24px">
+        <hr class="divider" style="margin:0 0 20px">
+        <h4 style="margin-bottom:16px;color:var(--success)">✓ Requirements Extracted</h4>
+        <div id="jd-results-content"></div>
+        <div style="background:var(--accent-subtle);border-radius:var(--r);padding:12px 16px;margin-top:16px">
+          <p class="text-sm text-secondary">
+            <strong>Next step:</strong> Copy these values into a new job post.
+            <a href="{{ url_for('admin_jobs.job_create') }}" class="text-accent">Create Job →</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+{% endif %}
+
+<!-- ═══════════ SCREENING PROGRESS MODAL ═══════════ -->
+<div id="progress-modal" class="progress-modal">
+  <div class="progress-card">
+    <div class="progress-icon">🤖</div>
+    <div class="progress-title">Running AI Screening</div>
+    <div class="progress-sub" id="progress-sub">Preparing batch analysis...</div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="text-xs text-tertiary" id="progress-pct" style="margin-top:6px;font-family:var(--font-mono)">0%</div>
+    <div class="progress-steps">
+      <div class="progress-step active" id="step-score">
+        <span class="progress-step-dot"></span>
+        Computing deterministic scores
+      </div>
+      <div class="progress-step" id="step-ai">
+        <span class="progress-step-dot"></span>
+        Evaluating all candidates
+      </div>
+      <div class="progress-step" id="step-save">
+        <span class="progress-step-dot"></span>
+        Saving results to database
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Tab switching ── */
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── File drop ── */
+function onFileSelected(input) {
+  if (input.files[0]) {
+    document.getElementById('csv-file-label').textContent = input.files[0].name;
+    document.getElementById('csv-drop').style.borderColor = 'var(--success)';
+    document.getElementById('csv-drop').style.background = 'var(--success-bg)';
+  }
+}
+const drop = document.getElementById('csv-drop');
+if (drop) {
+  ['dragover','dragleave','drop'].forEach(ev => {
+    drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); });
+  });
+  drop.addEventListener('dragover', () => drop.classList.add('drag-over'));
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+  drop.addEventListener('drop', e => {
+    drop.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) { document.getElementById('csv-file').files = e.dataTransfer.files; onFileSelected({files:[file]}); }
+  });
+}
+
+/* ── JD Extraction ── */
+function extractJD() {
+  const text = document.getElementById('jd-input').value.trim();
+  if (text.length < 50) { window.adminToast('Please paste a longer job description (50+ chars)', 'error'); return; }
+  const btn = document.getElementById('jd-extract-btn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  fetch('/recruiter/screening/extract-jd', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jd_text: text })
+  }).then(r => r.json()).then(data => {
+    btn.classList.remove('loading'); btn.disabled = false;
+    if (data.ok) {
+      renderJDResults(data.data);
+    } else {
+      window.adminToast(data.error || 'Extraction failed', 'error');
+    }
+  }).catch(() => { btn.classList.remove('loading'); btn.disabled = false; window.adminToast('Network error', 'error'); });
+}
+
+function renderJDResults(d) {
+  const panel = document.getElementById('jd-results');
+  const content = document.getElementById('jd-results-content');
+  const rows = [
+    ['Job Title', d.title],
+    ['Seniority', d.seniority],
+    ['Department', d.department],
+    ['Location', d.location],
+    ['Employment Type', d.employment_type],
+    ['Required Skills', d.required_skills],
+    ['Min Experience', d.min_years_experience ? d.min_years_experience + ' years' : '—'],
+    ['Required Education', d.required_education],
+  ];
+  content.innerHTML = rows.filter(r => r[1]).map(([k, v]) => `
+    <div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:.875rem">
+      <span style="width:140px;font-weight:500;color:var(--text-secondary);flex-shrink:0">${k}</span>
+      <span style="color:var(--text-primary)">${v}</span>
+    </div>
+  `).join('');
+  if (d.description) {
+    content.innerHTML += `<div style="margin-top:12px;padding:14px;background:var(--bg-inset);border-radius:var(--r);font-size:.875rem;line-height:1.65;color:var(--text-secondary)">${d.description}</div>`;
+  }
+  panel.style.display = 'block';
+  window.adminToast('Requirements extracted successfully!', 'success');
+}
+
+/* ── Run Screening with animated progress modal ── */
+const runBtn = document.getElementById('run-screening-btn');
+if (runBtn) {
+  runBtn.addEventListener('click', function() {
+    const jobId = this.dataset.jobId;
+    if (!jobId) return;
+
+    // Open progress modal
+    const modal = document.getElementById('progress-modal');
+    modal.classList.add('open');
+
+    // Animate progress: step 1
+    setProgress(20, 'Computing deterministic scores...');
+    document.getElementById('step-score').classList.add('active');
+
+    setTimeout(() => {
+      setProgress(45, 'Evaluating all candidates simultaneously...');
+      document.getElementById('step-score').classList.remove('active');
+      document.getElementById('step-score').classList.add('done');
+      document.getElementById('step-score').querySelector('.progress-step-dot').style.background = 'var(--success)';
+      document.getElementById('step-ai').classList.add('active');
+    }, 800);
+
+    setTimeout(() => {
+      setProgress(75, 'Scoring and generating written notes per candidate...');
+    }, 2000);
+
+    fetch('/recruiter/screening/' + jobId + '/run', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          setProgress(90, 'Saving results...');
+          document.getElementById('step-ai').classList.remove('active');
+          document.getElementById('step-ai').classList.add('done');
+          document.getElementById('step-save').classList.add('active');
+
+          setTimeout(() => {
+            setProgress(100, `Done! ${data.processed} candidates screened in ${data.elapsed}s`);
+            document.getElementById('step-save').classList.remove('active');
+            document.getElementById('step-save').classList.add('done');
+
+            if (data.bias_count > 0) {
+              document.getElementById('progress-sub').innerHTML += `<br><span style="color:var(--warn)">⚠ ${data.bias_count} bias flag(s) — review in results</span>`;
+            }
+
+            // Console log for the user
+            console.log('%c[Mpact] Screening complete!', 'color:#635BFF;font-weight:bold', {
+              processed: data.processed,
+              elapsed: data.elapsed + 's',
+              bias_flags: data.bias_count,
+              redirect: data.redirect
+            });
+
+            setTimeout(() => {
+              modal.classList.remove('open');
+              window.adminToast(`✓ Screened ${data.processed} candidates in ${data.elapsed}s`, 'success');
+              window.location.href = data.redirect;
+            }, 1400);
+          }, 600);
+        } else {
+          modal.classList.remove('open');
+          window.adminToast(data.error || 'Screening failed', 'error');
+          console.error('[Mpact] Screening failed:', data.error);
+        }
+      })
+      .catch(err => {
+        modal.classList.remove('open');
+        window.adminToast('Network error during screening', 'error');
+        console.error('[Mpact] Network error:', err);
+      });
+  });
+}
+
+function setProgress(pct, msg) {
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  if (msg) document.getElementById('progress-sub').textContent = msg;
+}
+
+// Close modal on backdrop click
+document.getElementById('progress-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+</script>
+{% endblock %}

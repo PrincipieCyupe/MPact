@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Import CSV — {{ job.title }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin_jobs.job_detail', job_id=job.id) }}"
+   class="text-sm text-secondary" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:20px">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+  Back to job
+</a>
+
+<div style="max-width:680px">
+  <h5>External Applicants — Scenario 2</h5>
+  <h2 style="margin-top:4px;margin-bottom:20px">Import CSV for "{{ job.title }}"</h2>
+
+  <div class="card">
+    <div class="card-body">
+      <p class="text-secondary text-sm mb-md" style="line-height:1.65">
+        Upload a spreadsheet exported from LinkedIn, Indeed, Glassdoor, or any ATS.
+        Mpact will parse each row and register applicants under this job, ready for screening.
+      </p>
+
+      <h5 style="margin-bottom:8px">Expected Columns (flexible, case-insensitive)</h5>
+      <div class="csv-columns-preview">full_name, email, phone, location, skills, years_experience, education, education_level, projects</div>
+      <ul class="text-xs text-secondary mt-xs" style="padding-left:16px;line-height:1.8">
+        <li><strong>full_name</strong> — required. All others are optional.</li>
+        <li><strong>education_level</strong> — one of: phd, masters, bachelors, diploma, highschool, none</li>
+        <li><strong>skills</strong> — comma-separated, e.g. "Python, SQL, TensorFlow"</li>
+        <li><strong>projects</strong> — newline or semicolon-separated list</li>
+        <li>Extra columns are silently ignored.</li>
+      </ul>
+
+      <hr class="divider">
+
+      <form method="POST" enctype="multipart/form-data" id="import-form">
+        <div class="file-drop" id="csv-drop" onclick="document.getElementById('csv-file').click()">
+          <input type="file" id="csv-file" name="csv_file" accept=".csv,.tsv" onchange="onFileSelected(this)">
+          <div class="file-drop-icon">📂</div>
+          <div class="file-drop-label" id="csv-label">Click to choose file or drag &amp; drop</div>
+          <div class="file-drop-hint">.csv or .tsv · UTF-8 encoding recommended</div>
+        </div>
+
+        <div class="flex gap-sm mt-lg">
+          <button type="submit" class="btn btn-primary" id="import-btn">
+            <span class="btn-text">Import Applicants</span>
+          </button>
+          <a href="{{ url_for('admin_jobs.job_detail', job_id=job.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card mt-sm" style="border-left:3px solid var(--info)">
+    <div class="card-body-sm">
+      <p class="text-sm text-secondary" style="line-height:1.65">
+        <strong>After import:</strong> Go to
+        <a href="{{ url_for('admin_screening.index', job_id=job.id) }}">Screening</a>
+        to evaluate all imported candidates at once.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function onFileSelected(input) {
+  if (input.files[0]) {
+    document.getElementById('csv-label').textContent = '✓ ' + input.files[0].name;
+    document.getElementById('csv-drop').style.borderColor = 'var(--success)';
+    document.getElementById('csv-drop').style.background = 'var(--success-bg)';
+  }
+}
+const drop = document.getElementById('csv-drop');
+['dragover','dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
+drop.addEventListener('dragover', () => drop.classList.add('drag-over'));
+drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+drop.addEventListener('drop', e => {
+  drop.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) { document.getElementById('csv-file').files = e.dataTransfer.files; onFileSelected({files:[f]}); }
+});
+document.getElementById('import-form').addEventListener('submit', function() {
+  const btn = document.getElementById('import-btn');
+  btn.classList.add('loading'); btn.disabled = true;
+});
+</script>
+{% endblock %}
