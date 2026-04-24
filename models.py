@@ -154,7 +154,7 @@ class Applicant(db.Model):
     custom_answers = db.Column(db.Text)  # JSON: {"field_id": "answer", ...}
     source = db.Column(db.String(40), default="web")  # web | seed
 
-    status = db.Column(db.String(40), default="new")  # new | reviewed | shortlisted | rejected
+    status = db.Column(db.String(40), default="new")  # new | reviewed | shortlisted | interview | rejected
 
     # screening output
     skills_score = db.Column(db.Float)
@@ -171,6 +171,22 @@ class Applicant(db.Model):
     ai_reasoning = db.Column(db.Text)
     bias_flag = db.Column(db.Boolean, default=False)
     bias_notes = db.Column(db.Text)
+    recruiter_notes = db.Column(db.Text)
+
+    # Umurava Talent Profile Schema
+    headline = db.Column(db.String(300))
+    bio = db.Column(db.Text)
+    structured_skills = db.Column(db.Text)      # JSON: [{name, level, yearsOfExperience}]
+    languages_data = db.Column(db.Text)         # JSON: [{language, proficiency}]
+    structured_experience = db.Column(db.Text)  # JSON: [{company, title, startDate, endDate, isCurrent, description, skills[]}]
+    structured_education = db.Column(db.Text)   # JSON: [{institution, degree, field, startYear, endYear}]
+    certifications_data = db.Column(db.Text)    # JSON: [{name, issuer, date, url}]
+    structured_projects = db.Column(db.Text)    # JSON: [{name, description, url, skills[], isFeatured}]
+    availability_status = db.Column(db.String(40))   # available | open | not-available
+    availability_type = db.Column(db.String(40))     # full-time | part-time | contract | freelance
+    linkedin = db.Column(db.String(300))
+    github = db.Column(db.String(300))
+    portfolio_url = db.Column(db.String(300))
 
     screened_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -184,9 +200,59 @@ class Applicant(db.Model):
 
     @property
     def skills_list(self):
+        if self.structured_skills:
+            try:
+                data = json.loads(self.structured_skills)
+                names = [s.get("name", "").strip() for s in data if s.get("name")]
+                if names:
+                    return names
+            except Exception:
+                pass
         if not self.skills:
             return []
         return [s.strip() for s in self.skills.split(",") if s.strip()]
+
+    @property
+    def structured_skills_list(self):
+        try:
+            return json.loads(self.structured_skills) if self.structured_skills else []
+        except Exception:
+            return []
+
+    @property
+    def structured_experience_list(self):
+        try:
+            return json.loads(self.structured_experience) if self.structured_experience else []
+        except Exception:
+            return []
+
+    @property
+    def structured_education_list(self):
+        try:
+            return json.loads(self.structured_education) if self.structured_education else []
+        except Exception:
+            return []
+
+    @property
+    def certifications_list(self):
+        try:
+            return json.loads(self.certifications_data) if self.certifications_data else []
+        except Exception:
+            return []
+
+    @property
+    def structured_projects_list(self):
+        try:
+            return json.loads(self.structured_projects) if self.structured_projects else []
+        except Exception:
+            return []
+
+    @property
+    def languages_list(self):
+        try:
+            return json.loads(self.languages_data) if self.languages_data else []
+        except Exception:
+            return []
 
     @property
     def strengths_list(self):
