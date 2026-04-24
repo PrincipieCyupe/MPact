@@ -136,9 +136,15 @@ def send_verification_email(to_email: str, to_name: str, verify_url: str) -> boo
         msg["To"]      = to_email
         msg.attach(MIMEText(html, "html"))
 
-        server = smtplib.SMTP(mail_server, current_app.config.get("MAIL_PORT", 587))
-        server.ehlo()
-        server.starttls()
+        port = int(current_app.config.get("MAIL_PORT", 587))
+        if port == 465:
+            import ssl as _ssl
+            ctx = _ssl.create_default_context()
+            server = smtplib.SMTP_SSL(mail_server, port, timeout=10, context=ctx)
+        else:
+            server = smtplib.SMTP(mail_server, port, timeout=10)
+            server.ehlo()
+            server.starttls()
         server.login(
             current_app.config["MAIL_USERNAME"],
             current_app.config["MAIL_PASSWORD"],
