@@ -1,6 +1,13 @@
 """Deterministic weighted scoring. Pairs with Gemini for qualitative analysis."""
 import re
 
+SKILL_LEVEL_WEIGHTS = {
+    "expert":       1.00,
+    "advanced":     0.85,
+    "intermediate": 0.65,
+    "beginner":     0.35,
+}
+
 EDUCATION_LEVELS = {
     "phd": 100,
     "masters": 85,
@@ -72,6 +79,31 @@ def score_education(level, required):
     return round(base * 0.6, 1)
 
 
+def score_skills_structured(structured_skills, required_skills):
+    """Score skills using structured {name, level, yearsOfExperience} entries.
+    Expert match = 1.0, Advanced = 0.85, Intermediate = 0.65, Beginner = 0.35.
+    """
+    if not required_skills:
+        return 100.0 if structured_skills else 50.0
+    req = [_normalize(s) for s in required_skills if s]
+    if not req:
+        return 50.0
+    matched_weight = 0.0
+    for r in req:
+        r_tokens = _tokenize(r)
+        for entry in structured_skills:
+            h = _normalize(entry.get("name", ""))
+            if not h:
+                continue
+            h_tokens = _tokenize(h)
+            level = _normalize(entry.get("level", "intermediate"))
+            weight = SKILL_LEVEL_WEIGHTS.get(level, 0.65)
+            if r == h or (r_tokens and h_tokens and len(r_tokens & h_tokens) >= max(1, min(len(r_tokens), len(h_tokens)) // 2)):
+                matched_weight += weight
+                break
+    return round((matched_weight / len(req)) * 100, 1)
+
+
 def score_projects(project_count):
     if not project_count:
         return 30.0
@@ -81,7 +113,10 @@ def score_projects(project_count):
 
 
 def compute_weighted_score(applicant, job):
-    s = score_skills(applicant.skills_list, job.skills_list)
+    if applicant.structured_skills_list:
+        s = score_skills_structured(applicant.structured_skills_list, job.skills_list)
+    else:
+        s = score_skills(applicant.skills_list, job.skills_list)
     e = score_experience(applicant.years_experience, job.min_years_experience)
     ed = score_education(applicant.education_level, job.required_education)
     p = score_projects(applicant.project_count)

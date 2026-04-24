@@ -49,7 +49,7 @@ def _get_model():
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _build_batch_prompt(job, candidates):
-    """Build a single prompt that evaluates ALL candidates at once."""
+    """Build a single prompt that evaluates ALL candidates using the full Umurava schema."""
     job_block = f"""JOB DETAILS
 Title: {job.title}
 Seniority: {job.seniority or 'Not specified'}
@@ -60,16 +60,64 @@ Description: {(job.description or '')[:1500]}"""
 
     cand_blocks = []
     for c in candidates:
+        block = {"id": c["id"], "name": c["name"]}
+
+        if c.get("headline"):
+            block["headline"] = c["headline"]
+
+        # Skills — prefer structured with proficiency levels
+        structured_skills = c.get("structured_skills") or []
+        if structured_skills:
+            block["skills"] = structured_skills
+        else:
+            block["skills"] = c.get("skills") or "N/A"
+
+        block["years_experience"] = c.get("years_experience") or 0
+
+        # Education — prefer structured timeline
+        structured_edu = c.get("structured_education") or []
+        if structured_edu:
+            block["education"] = structured_edu
+        else:
+            block["education"] = f"{c.get('education') or 'N/A'} ({c.get('education_level') or 'N/A'})"
+
+        # Experience timeline
+        structured_exp = c.get("structured_experience") or []
+        if structured_exp:
+            block["experience_timeline"] = structured_exp
+
+        # Certifications
+        certs = c.get("certifications") or []
+        if certs:
+            block["certifications"] = certs
+
+        # Projects — prefer structured
+        structured_proj = c.get("structured_projects") or []
+        if structured_proj:
+            block["projects"] = structured_proj
+        else:
+            block["projects"] = (c.get("projects") or "N/A")[:400]
+
+        # Languages
+        langs = c.get("languages") or []
+        if langs:
+            block["languages"] = langs
+
+        # Availability
+        if c.get("availability_status"):
+            block["availability"] = {
+                "status": c["availability_status"],
+                "type": c.get("availability_type") or "",
+            }
+
+        # Resume excerpt for candidates who uploaded a PDF
         resume_excerpt = (c.get("resume_text") or "")[:1200]
-        block = {
-            "id": c["id"],
-            "name": c["name"],
-            "skills": c.get("skills") or "N/A",
-            "years_experience": c.get("years_experience") or 0,
-            "education": f"{c.get('education') or 'N/A'} ({c.get('education_level') or 'N/A'})",
-            "projects": (c.get("projects") or "N/A")[:400],
-            "resume_excerpt": resume_excerpt,
-        }
+        if resume_excerpt:
+            block["resume_excerpt"] = resume_excerpt
+
+        if c.get("custom_qa"):
+            block["application_responses"] = c["custom_qa"]
+
         cand_blocks.append(block)
 
     candidates_json = json.dumps(cand_blocks, indent=2)
@@ -82,8 +130,10 @@ CANDIDATES TO EVALUATE:
 {candidates_json}
 
 INSTRUCTIONS:
-- Score each candidate holistically (0-100) based on skills match, experience depth, education fit, and project quality
-- Provide 3-5 specific strengths grounded in their actual profile data
+- Score each candidate holistically (0-100) using ALL available structured data: skill proficiency levels, experience timeline, education, certifications, projects, availability, and application responses
+- When skills have proficiency levels (Expert/Advanced/Intermediate/Beginner), weight Expert and Advanced skills more heavily in your evaluation
+- If a candidate has application_responses, factor their answers into the score and cite them in strengths/gaps/reasoning
+- Provide 3-5 specific strengths grounded in their actual profile data (cite skill levels, companies, certifications if present)
 - Provide 2-4 honest gaps or risks (be constructive, not harsh)
 - Give recommendation: "strong_fit" (85+), "fit" (70-84), "maybe" (50-69), "not_fit" (<50)
 - Write 2-3 sentence reasoning that references SPECIFIC evidence from their profile
@@ -222,19 +272,36 @@ def analyze_batch(job, applicants, weighted_scores):
     """
     model = _get_model()
 
-    # Build candidate payloads
+    # Build candidate payloads with full Umurava schema fields
     candidates = []
     for a in applicants:
-        candidates.append({
+        payload = {
             "id": a.id,
             "name": a.full_name,
+            "headline": a.headline or "",
             "skills": a.skills,
+            "structured_skills": a.structured_skills_list,
             "years_experience": a.years_experience,
             "education": a.education,
             "education_level": a.education_level,
+            "structured_education": a.structured_education_list,
+            "structured_experience": a.structured_experience_list,
+            "certifications": a.certifications_list,
             "projects": a.projects,
+            "structured_projects": a.structured_projects_list,
+            "languages": a.languages_list,
+            "availability_status": a.availability_status or "",
+            "availability_type": a.availability_type or "",
             "resume_text": a.resume_text,
-        })
+        }
+        answers = a.custom_answers_dict
+        if answers and a.job.custom_fields:
+            payload["custom_qa"] = [
+                {"question": f.label, "answer": answers[str(f.id)]}
+                for f in a.job.custom_fields
+                if answers.get(str(f.id))
+            ]
+        candidates.append(payload)
 
     total = len(candidates)
     _log(f"{'━'*60}", CYAN)
