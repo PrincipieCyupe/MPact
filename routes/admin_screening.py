@@ -16,7 +16,7 @@ from extensions import db
 from models import Job, Applicant
 from services.scoring_engine import compute_weighted_score
 from services.gemini_service import analyze_batch, extract_jd_requirements
-from services.email_service import send_shortlist_email
+from services.email_service import send_shortlist_email, send_rejection_email
 from routes import admin_required
 
 
@@ -60,7 +60,7 @@ def index():
 @bp.route("/screening/<int:job_id>/weights", methods=["POST"])
 @admin_required
 def update_weights(job_id):
-    job = Job.query.get_or_404(job_id)
+    job = _own_job(job_id)
     try:
         job.weight_skills = int(request.form.get("weight_skills") or 0)
         job.weight_experience = int(request.form.get("weight_experience") or 0)
@@ -85,7 +85,7 @@ def update_weights(job_id):
 @bp.route("/screening/<int:job_id>/run", methods=["POST"])
 @admin_required
 def run(job_id):
-    job = Job.query.get_or_404(job_id)
+    job = _own_job(job_id)
     total_weight = job.weight_skills + job.weight_experience + job.weight_education + job.weight_projects
     if total_weight != 100:
         return jsonify({"ok": False, "error": f"Weights must sum to 100 (currently {total_weight})."}), 400
@@ -153,6 +153,7 @@ def run(job_id):
         "processed": processed,
         "elapsed": round(elapsed, 1),
         "bias_count": bias_count,
+        "model": current_app.config.get("GEMINI_MODEL", "gemini-1.5-flash"),
         "redirect": url_for("admin_screening.results", job_id=job.id),
     })
 
@@ -164,7 +165,7 @@ def run(job_id):
 @bp.route("/screening/<int:job_id>/results")
 @admin_required
 def results(job_id):
-    job = Job.query.get_or_404(job_id)
+    job = _own_job(job_id)
     limit = request.args.get("limit", default=10, type=int)
     if limit not in (10, 20, 50):
         limit = 10
@@ -185,7 +186,7 @@ def results(job_id):
 @bp.route("/screening/<int:job_id>/export")
 @admin_required
 def export_csv(job_id):
-    job = Job.query.get_or_404(job_id)
+    job = _own_job(job_id)
     limit = request.args.get("limit", default=10, type=int)
     if limit not in (10, 20, 50):
         limit = 10
@@ -234,10 +235,19 @@ def export_csv(job_id):
 # CANDIDATE JSON (drawer)
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _own_applicant(applicant_id):
+    """Fetch an applicant whose job belongs to the current recruiter, or 404."""
+    a = Applicant.query.get_or_404(applicant_id)
+    if a.job.recruiter_id != _rid():
+        from flask import abort
+        abort(404)
+    return a
+
+
 @bp.route("/applicant/<int:applicant_id>.json")
 @admin_required
 def applicant_json(applicant_id):
-    a = Applicant.query.get_or_404(applicant_id)
+    a = _own_applicant(applicant_id)
     return jsonify({
         "id": a.id,
         "name": a.full_name,
@@ -278,6 +288,20 @@ def applicant_json(applicant_id):
             for f in a.job.custom_fields
             if a.custom_answers_dict.get(str(f.id), "")
         ],
+        "recruiter_notes": a.recruiter_notes or "",
+        "headline": a.headline or "",
+        "bio": a.bio or "",
+        "structured_skills": a.structured_skills_list,
+        "languages": a.languages_list,
+        "structured_experience": a.structured_experience_list,
+        "structured_education": a.structured_education_list,
+        "certifications": a.certifications_list,
+        "structured_projects": a.structured_projects_list,
+        "availability_status": a.availability_status or "",
+        "availability_type": a.availability_type or "",
+        "linkedin": a.linkedin or "",
+        "github": a.github or "",
+        "portfolio_url": a.portfolio_url or "",
     })
 
 
@@ -288,18 +312,21 @@ def applicant_json(applicant_id):
 @bp.route("/applicant/<int:applicant_id>/status", methods=["POST"])
 @admin_required
 def update_status(applicant_id):
-    a = Applicant.query.get_or_404(applicant_id)
+    a = _own_applicant(applicant_id)
     if request.is_json:
         new_status = request.json.get("status")
     else:
         new_status = request.form.get("status")
-    if new_status not in ("new", "reviewed", "shortlisted", "rejected"):
+    if new_status not in ("new", "reviewed", "shortlisted", "interview", "rejected"):
         return jsonify({"ok": False, "error": "Invalid status"}), 400
     prev_status = a.status
     a.status = new_status
     db.session.commit()
+    brand = current_app.config.get("BRAND_NAME", "Mpact")
     if new_status == "shortlisted" and prev_status != "shortlisted" and a.email:
-        send_shortlist_email(a, a.job, current_app.config.get("BRAND_NAME", "Mpact"))
+        send_shortlist_email(a, a.job, brand)
+    elif new_status == "rejected" and prev_status != "rejected" and a.email:
+        send_rejection_email(a, a.job, brand)
     return jsonify({"ok": True, "status": a.status})
 
 
@@ -310,21 +337,21 @@ def bulk_status(job_id):
     data = request.json or {}
     ids = data.get("ids", [])
     new_status = data.get("status")
-    if not ids or new_status not in ("new", "reviewed", "shortlisted", "rejected"):
+    if not ids or new_status not in ("new", "reviewed", "shortlisted", "interview", "rejected"):
         return jsonify({"ok": False, "error": "Invalid request"}), 400
 
     updated = 0
     to_email = []
     for aid in ids:
         a = Applicant.query.get(aid)
-        if a and a.job_id == job_id:
+        if a and a.job_id == job_id and a.job.recruiter_id == _rid():
             if new_status == "shortlisted" and a.status != "shortlisted" and a.email:
                 to_email.append(a)
             a.status = new_status
             updated += 1
     db.session.commit()
 
-    job = Job.query.get(job_id)
+    job = Job.query.filter_by(id=job_id, recruiter_id=_rid()).first()
     brand = current_app.config.get("BRAND_NAME", "Mpact")
     for a in to_email:
         send_shortlist_email(a, job, brand)
@@ -334,13 +361,27 @@ def bulk_status(job_id):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# RECRUITER NOTES
+# ──────────────────────────────────────────────────────────────────────────────
+
+@bp.route("/applicant/<int:applicant_id>/notes", methods=["POST"])
+@admin_required
+def save_notes(applicant_id):
+    a = _own_applicant(applicant_id)
+    notes = (request.json or {}).get("notes", "")
+    a.recruiter_notes = notes.strip() or None
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # RESUME DOWNLOAD
 # ──────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/applicant/<int:applicant_id>/resume")
 @admin_required
 def download_resume(applicant_id):
-    a = Applicant.query.get_or_404(applicant_id)
+    a = _own_applicant(applicant_id)
     if not a.resume_filename:
         return jsonify({"error": "No resume on file"}), 404
     return send_from_directory(

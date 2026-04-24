@@ -11,6 +11,7 @@ from extensions import db
 from models import Job, Applicant
 from services.file_parser import extract_pdf_text
 from services.resume_parser import parse_resume_fields
+from services.email_service import send_application_received_email
 
 bp = Blueprint("public", __name__)
 
@@ -87,9 +88,48 @@ def apply(job_id):
         education_level = (request.form.get("education_level") or "").strip().lower()
         projects = (request.form.get("projects") or "").strip()
 
+        # Umurava Talent Profile Schema fields
+        headline = (request.form.get("headline") or "").strip()
+        bio = (request.form.get("bio") or "").strip()
+        availability_status = (request.form.get("availability_status") or "").strip()
+        availability_type = (request.form.get("availability_type") or "").strip()
+        linkedin = (request.form.get("linkedin") or "").strip()
+        github = (request.form.get("github") or "").strip()
+        portfolio_url = (request.form.get("portfolio_url") or "").strip()
+
+        def _parse_json_field(key):
+            raw = (request.form.get(key) or "").strip()
+            if not raw:
+                return None
+            try:
+                parsed = json.loads(raw)
+                return raw if parsed else None
+            except Exception:
+                return None
+
+        structured_skills = _parse_json_field("structured_skills")
+        languages_data = _parse_json_field("languages_data")
+        structured_experience = _parse_json_field("structured_experience")
+        structured_education = _parse_json_field("structured_education")
+        certifications_data = _parse_json_field("certifications_data")
+        structured_projects = _parse_json_field("structured_projects")
+
+        # Derive flat skills from structured if the text field was left empty
+        if structured_skills and not skills:
+            try:
+                skill_names = [s.get("name", "").strip() for s in json.loads(structured_skills) if s.get("name")]
+                skills = ", ".join(skill_names)
+            except Exception:
+                pass
+
         if not full_name or not email:
             flash("Name and email are required.", "error")
             return redirect(url_for("public.apply", job_id=job.id))
+
+        existing = Applicant.query.filter_by(job_id=job.id, email=email).first()
+        if existing:
+            flash("You've already applied for this role.", "info")
+            return redirect(url_for("public.apply_success", job_id=job.id, applicant_id=existing.id))
 
         try:
             years_experience = float(years_experience)
@@ -98,9 +138,13 @@ def apply(job_id):
 
         project_count = 0
         if projects:
-            # rough count: split on newlines or semicolons or commas-with-words
             chunks = [c for c in projects.replace(";", "\n").split("\n") if c.strip()]
             project_count = max(1, len(chunks))
+        elif structured_projects:
+            try:
+                project_count = len(json.loads(structured_projects))
+            except Exception:
+                pass
 
         resume_text = ""
         resume_filename = None
@@ -141,9 +185,24 @@ def apply(job_id):
             custom_answers=json.dumps(custom_answers) if custom_answers else None,
             source="web",
             status="new",
+            headline=headline or None,
+            bio=bio or None,
+            structured_skills=structured_skills,
+            languages_data=languages_data,
+            structured_experience=structured_experience,
+            structured_education=structured_education,
+            certifications_data=certifications_data,
+            structured_projects=structured_projects,
+            availability_status=availability_status or None,
+            availability_type=availability_type or None,
+            linkedin=linkedin or None,
+            github=github or None,
+            portfolio_url=portfolio_url or None,
         )
         db.session.add(applicant)
         db.session.commit()
+        brand = current_app.config.get("BRAND_NAME", "Mpact")
+        send_application_received_email(applicant, job, brand)
         return redirect(url_for("public.apply_success", job_id=job.id, applicant_id=applicant.id))
 
     return render_template("public/apply.html", job=job)
@@ -183,3 +242,41 @@ def apply_success(job_id, applicant_id):
     if applicant.job_id != job.id:
         abort(404)
     return render_template("public/apply_success.html", job=job, applicant=applicant)
+
+
+@bp.route("/application/status", methods=["GET", "POST"])
+def application_status():
+    """Candidate self-service: look up application status by email + reference."""
+    applicant = None
+    error = None
+
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        ref = (request.form.get("reference") or "").strip().upper()
+
+        if not email or not ref:
+            error = "Please enter both your email address and reference number."
+        else:
+            # Reference format: MPT-JJJJ-AAAAA
+            try:
+                parts = ref.split("-")
+                if len(parts) == 3 and parts[0] == "MPT":
+                    job_id_ref = int(parts[1])
+                    applicant_id_ref = int(parts[2])
+                    candidate = Applicant.query.filter_by(
+                        id=applicant_id_ref, job_id=job_id_ref
+                    ).first()
+                    if candidate and candidate.email.lower() == email:
+                        applicant = candidate
+                    else:
+                        error = "No application found matching that email and reference number."
+                else:
+                    error = "Invalid reference number format. It should look like MPT-0001-00001."
+            except (ValueError, IndexError):
+                error = "Invalid reference number format. It should look like MPT-0001-00001."
+
+    return render_template(
+        "public/application_status.html",
+        applicant=applicant,
+        error=error,
+    )
