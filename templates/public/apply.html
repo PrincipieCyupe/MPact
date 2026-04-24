@@ -44,6 +44,17 @@
           <p class="apply-form-sub">Upload your CV to autofill the form instantly, or fill it in manually.</p>
         </div>
 
+        <!-- Sticky section progress tracker -->
+        <div id="form-progress-bar" style="position:sticky;top:0;z-index:20;background:var(--bg-canvas);padding:10px 0 8px;margin-bottom:4px;border-bottom:1px solid var(--border-light)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span id="fp-label" class="text-xs font-semibold" style="color:var(--accent)">Personal Details</span>
+            <span id="fp-fraction" class="text-xs text-tertiary">Step 1 of 7</span>
+          </div>
+          <div style="height:3px;background:var(--border-light);border-radius:2px;overflow:hidden">
+            <div id="fp-fill" style="height:100%;width:14%;background:var(--accent);border-radius:2px;transition:width .35s ease"></div>
+          </div>
+        </div>
+
         <!-- CV smart upload zone -->
         <div id="cv-upload-zone" class="cv-smart-zone">
           <label for="cv-parse-input" class="cv-smart-drop" id="cv-drop-area">
@@ -73,6 +84,15 @@
         <form id="apply-form" method="POST" enctype="multipart/form-data"
               action="{{ url_for('public.apply', job_id=job.id) }}">
 
+          <!-- Hidden JSON fields for structured schema data -->
+          <input type="hidden" name="structured_skills" id="structured_skills_json">
+          <input type="hidden" name="languages_data" id="languages_data_json">
+          <input type="hidden" name="structured_experience" id="structured_experience_json">
+          <input type="hidden" name="structured_education" id="structured_education_json">
+          <input type="hidden" name="certifications_data" id="certifications_data_json">
+          <input type="hidden" name="structured_projects" id="structured_projects_json">
+
+          <!-- ── Personal Details ── -->
           <div class="apply-section-label">Personal Details</div>
 
           <div class="form-row">
@@ -97,21 +117,64 @@
             </div>
           </div>
 
-          <div class="apply-section-label" style="margin-top:8px">Experience &amp; Education</div>
+          <!-- ── About You ── -->
+          <div class="apply-section-label" style="margin-top:8px">About You</div>
 
           <div class="form-group">
-            <label class="form-label">Skills</label>
-            <input type="text" name="skills" id="f-skills" class="form-input" placeholder="Python, Flask, PostgreSQL, Docker">
-            <p class="form-hint">Comma-separated — align these with what the role asks for.</p>
+            <label class="form-label">Professional Headline</label>
+            <input type="text" name="headline" id="f-headline" class="form-input"
+              placeholder="e.g. Senior Backend Engineer · 6 yrs · Python, Go, AWS">
+            <p class="form-hint">One line that sums up your professional identity.</p>
           </div>
+
+          <div class="form-group">
+            <label class="form-label">Brief Bio</label>
+            <textarea name="bio" id="f-bio" class="form-textarea" rows="3"
+              placeholder="2–3 sentences on your background, what drives you, and what you bring to a team."></textarea>
+          </div>
+
+          <!-- ── Skills ── -->
+          <div class="apply-section-label" style="margin-top:8px">Skills</div>
+
+          <div id="skills-builder">
+            <div id="skills-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="addSkillRow()" style="font-size:.78rem">
+              + Add skill
+            </button>
+          </div>
+          <!-- Flat fallback hidden, populated from builder -->
+          <input type="hidden" name="skills" id="f-skills">
+          <p class="form-hint" style="margin-top:8px">Add each skill with your proficiency level — the AI uses this to grade your match.</p>
+
+          <!-- ── Languages ── -->
+          <div class="apply-section-label" style="margin-top:8px">Languages</div>
+
+          <div id="langs-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addLangRow()" style="font-size:.78rem">
+            + Add language
+          </button>
+
+          <!-- ── Work Experience ── -->
+          <div class="apply-section-label" style="margin-top:8px">Work Experience</div>
+
+          <div class="form-row" style="margin-bottom:10px">
+            <div class="form-group">
+              <label class="form-label">Total Years of Experience</label>
+              <input type="number" name="years_experience" id="f-exp" class="form-input" min="0" max="40" step="0.5" placeholder="4">
+            </div>
+          </div>
+
+          <div id="exp-rows" style="display:flex;flex-direction:column;gap:12px;margin-bottom:10px"></div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addExpRow()" style="font-size:.78rem">
+            + Add position
+          </button>
+
+          <!-- ── Education ── -->
+          <div class="apply-section-label" style="margin-top:8px">Education</div>
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Years of Experience</label>
-              <input type="number" name="years_experience" id="f-exp" class="form-input" min="0" max="40" step="0.5" placeholder="4">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Education Level</label>
+              <label class="form-label">Highest Education Level</label>
               <select name="education_level" id="f-edu-level" class="form-select">
                 <option value="">Select level...</option>
                 <option value="phd">PhD</option>
@@ -124,22 +187,90 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Education Details</label>
+          <div id="edu-rows" style="display:flex;flex-direction:column;gap:12px;margin-bottom:10px"></div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addEduRow()" style="font-size:.78rem">
+            + Add education entry
+          </button>
+
+          <!-- Flat fallback for older entries -->
+          <div class="form-group" style="margin-top:10px">
+            <label class="form-label">Degree &amp; Institution <span class="text-tertiary" style="font-weight:400;font-size:.8rem">(or summary)</span></label>
             <input type="text" name="education" id="f-edu" class="form-input" placeholder="BSc Computer Science, University of Rwanda">
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Notable Projects</label>
-            <textarea name="projects" id="projects" class="form-textarea" rows="4"
-              placeholder="Describe your key projects — one per line.&#10;e.g. Built an e-commerce platform with Django&#10;Created a real-time analytics dashboard"></textarea>
-            <p class="form-hint" id="project-count-hint">0 projects detected</p>
+          <!-- ── Certifications ── -->
+          <div class="apply-section-label" style="margin-top:8px">Certifications</div>
+
+          <div id="cert-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addCertRow()" style="font-size:.78rem">
+            + Add certification
+          </button>
+
+          <!-- ── Projects ── -->
+          <div class="apply-section-label" style="margin-top:8px">Projects</div>
+
+          <div id="proj-rows" style="display:flex;flex-direction:column;gap:12px;margin-bottom:10px"></div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="addProjRow()" style="font-size:.78rem">
+            + Add project
+          </button>
+
+          <div class="form-group" style="margin-top:10px">
+            <label class="form-label">Additional project notes <span class="text-tertiary" style="font-weight:400;font-size:.8rem">(optional)</span></label>
+            <textarea name="projects" id="f-projects" class="form-textarea" rows="3"
+              placeholder="Anything else worth mentioning about your work..."></textarea>
+            <p class="form-hint" id="project-count-hint"></p>
           </div>
 
-          <!-- Resume file attachment -->
+          <!-- ── Availability ── -->
+          <div class="apply-section-label" style="margin-top:8px">Availability</div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Current Status</label>
+              <select name="availability_status" id="f-avail-status" class="form-select">
+                <option value="">Select...</option>
+                <option value="available">Available now</option>
+                <option value="open">Open to opportunities</option>
+                <option value="not-available">Not available</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Preferred Work Type</label>
+              <select name="availability_type" id="f-avail-type" class="form-select">
+                <option value="">Select...</option>
+                <option value="full-time">Full-time</option>
+                <option value="part-time">Part-time</option>
+                <option value="contract">Contract</option>
+                <option value="freelance">Freelance</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ── Professional Links ── -->
+          <div class="apply-section-label" style="margin-top:8px">Professional Links</div>
+
+          <div class="form-group">
+            <label class="form-label">LinkedIn</label>
+            <input type="url" name="linkedin" id="f-linkedin" class="form-input" placeholder="https://linkedin.com/in/your-profile">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">GitHub</label>
+              <input type="url" name="github" id="f-github" class="form-input" placeholder="https://github.com/username">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Portfolio / Website</label>
+              <input type="url" name="portfolio_url" id="f-portfolio" class="form-input" placeholder="https://yoursite.com">
+            </div>
+          </div>
+
+          <!-- ── Resume ── -->
+          <div class="apply-section-label" style="margin-top:8px">Resume / CV</div>
+
           <div class="form-group">
             <label class="form-label" for="resume-input">
-              Resume / CV <span class="text-tertiary font-medium" style="font-weight:400;font-size:.8rem">(PDF, optional)</span>
+              Upload CV <span class="text-tertiary font-medium" style="font-weight:400;font-size:.8rem">(PDF, optional)</span>
             </label>
             <label for="resume-input" class="resume-attach-zone" id="resume-drop">
               <input type="file" id="resume-input" name="resume" accept=".pdf" style="display:none">
@@ -197,10 +328,16 @@
           {% endfor %}
           {% endif %}
 
-          <button type="submit" class="btn btn-primary apply-submit-btn">
+          <button type="submit" id="apply-submit-btn" class="btn btn-primary apply-submit-btn">
             <span class="btn-text">Submit Application</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
+
+          <p style="margin-top:14px;font-size:.72rem;color:var(--text-tertiary);line-height:1.6">
+            By submitting, you consent to {{ brand_name }} processing your personal data to evaluate your application.
+            Your information is stored securely, used only for this recruitment, and never shared with third parties.
+            Reply to any email from us to request access or deletion of your data.
+          </p>
         </form>
 
       </div>
@@ -214,15 +351,246 @@
 const JOB_ID = {{ job.id }};
 let parsedFile = null;
 
-// CV parse + autofill
+/* ── Dynamic data stores ──────────────────────────────────────── */
+let skillsData = [];
+let langsData  = [];
+let expData    = [];
+let eduData    = [];
+let certData   = [];
+let projData   = [];
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+function syncJSON(id, arr) {
+  const el = document.getElementById(id);
+  if (el) el.value = arr.length ? JSON.stringify(arr) : '';
+}
+
+function rowStyle() {
+  return 'background:var(--bg-inset);border:1px solid var(--border-light);border-radius:var(--r-sm);padding:10px 12px;display:flex;gap:8px;align-items:flex-start;';
+}
+
+function inputStyle() {
+  return 'flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg-canvas);color:var(--text-primary);font-size:.85rem;font-family:inherit;min-width:0;';
+}
+
+function selectStyle() {
+  return inputStyle() + 'flex:0 0 auto;width:140px;';
+}
+
+function removeBtn(onclick) {
+  return `<button type="button" onclick="${onclick}" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--text-tertiary);padding:4px;line-height:1;font-size:1.1rem;margin-top:2px" title="Remove">×</button>`;
+}
+
+/* ── Skills Builder ──────────────────────────────────────────── */
+function addSkillRow(name, level, years) {
+  const idx = skillsData.length;
+  skillsData.push({ name: name || '', level: level || 'intermediate', yearsOfExperience: years || 0 });
+  renderSkillRows();
+  syncSkillsAll();
+}
+
+function renderSkillRows() {
+  const container = document.getElementById('skills-rows');
+  if (!container) return;
+  container.innerHTML = skillsData.map((s, i) => `
+    <div style="${rowStyle()}">
+      <input style="${inputStyle()}" type="text" placeholder="Skill name (e.g. Python)"
+        value="${s.name}" oninput="skillsData[${i}].name=this.value;syncSkillsAll()">
+      <select style="${selectStyle()}" onchange="skillsData[${i}].level=this.value;syncSkillsAll()">
+        <option value="expert"       ${s.level==='expert'       ?'selected':''}>Expert</option>
+        <option value="advanced"     ${s.level==='advanced'     ?'selected':''}>Advanced</option>
+        <option value="intermediate" ${s.level==='intermediate' ?'selected':''}>Intermediate</option>
+        <option value="beginner"     ${s.level==='beginner'     ?'selected':''}>Beginner</option>
+      </select>
+      <input style="${inputStyle()}flex:0 0 60px;width:60px;" type="number" min="0" max="30"
+        placeholder="Yrs" value="${s.yearsOfExperience || ''}"
+        oninput="skillsData[${i}].yearsOfExperience=parseFloat(this.value)||0;syncSkillsAll()">
+      ${removeBtn(`removeSkill(${i})`)}
+    </div>`).join('');
+}
+
+function removeSkill(i) {
+  skillsData.splice(i, 1);
+  renderSkillRows();
+  syncSkillsAll();
+}
+
+function syncSkillsAll() {
+  syncJSON('structured_skills_json', skillsData);
+  const flat = document.getElementById('f-skills');
+  if (flat) flat.value = skillsData.map(s => s.name).filter(Boolean).join(', ');
+}
+
+/* ── Language Builder ────────────────────────────────────────── */
+function addLangRow(lang, prof) {
+  langsData.push({ name: lang || '', proficiency: prof || 'professional' });
+  renderLangRows();
+  syncJSON('languages_data_json', langsData);
+}
+
+function renderLangRows() {
+  const c = document.getElementById('langs-rows');
+  if (!c) return;
+  c.innerHTML = langsData.map((l, i) => `
+    <div style="${rowStyle()}">
+      <input style="${inputStyle()}" type="text" placeholder="Language (e.g. English)"
+        value="${l.name}" oninput="langsData[${i}].name=this.value;syncJSON('languages_data_json',langsData)">
+      <select style="${selectStyle()}" onchange="langsData[${i}].proficiency=this.value;syncJSON('languages_data_json',langsData)">
+        <option value="native"       ${l.proficiency==='native'       ?'selected':''}>Native</option>
+        <option value="fluent"       ${l.proficiency==='fluent'       ?'selected':''}>Fluent</option>
+        <option value="professional" ${l.proficiency==='professional' ?'selected':''}>Professional</option>
+        <option value="basic"        ${l.proficiency==='basic'        ?'selected':''}>Basic</option>
+      </select>
+      ${removeBtn(`removeLang(${i})`)}
+    </div>`).join('');
+}
+
+function removeLang(i) {
+  langsData.splice(i, 1);
+  renderLangRows();
+  syncJSON('languages_data_json', langsData);
+}
+
+/* ── Experience Builder ──────────────────────────────────────── */
+function addExpRow(obj) {
+  expData.push(obj || { company:'', role:'', startDate:'', endDate:'', isCurrent:false, description:'' });
+  renderExpRows();
+  syncJSON('structured_experience_json', expData);
+}
+
+function renderExpRows() {
+  const c = document.getElementById('exp-rows');
+  if (!c) return;
+  c.innerHTML = expData.map((e, i) => `
+    <div style="${rowStyle()}flex-direction:column;">
+      <div style="display:flex;gap:8px;width:100%">
+        <input style="${inputStyle()}" type="text" placeholder="Company"
+          value="${e.company}" oninput="expData[${i}].company=this.value;syncJSON('structured_experience_json',expData)">
+        <input style="${inputStyle()}" type="text" placeholder="Role / Job title"
+          value="${e.role}" oninput="expData[${i}].role=this.value;syncJSON('structured_experience_json',expData)">
+        ${removeBtn(`removeExp(${i})`)}
+      </div>
+      <div style="display:flex;gap:8px;width:100%;align-items:center">
+        <input style="${inputStyle()}flex:0 0 120px;width:120px;" type="text" placeholder="Start (e.g. 2022-01)"
+          value="${e.startDate}" oninput="expData[${i}].startDate=this.value;syncJSON('structured_experience_json',expData)">
+        <input style="${inputStyle()}flex:0 0 120px;width:120px;" type="text" placeholder="End (or leave blank)"
+          value="${e.endDate}" ${e.isCurrent?'disabled':''} oninput="expData[${i}].endDate=this.value;syncJSON('structured_experience_json',expData)">
+        <label style="display:flex;align-items:center;gap:5px;font-size:.82rem;color:var(--text-secondary);flex-shrink:0;cursor:pointer">
+          <input type="checkbox" ${e.isCurrent?'checked':''} onchange="expData[${i}].isCurrent=this.checked;expData[${i}].endDate='';renderExpRows();syncJSON('structured_experience_json',expData)">
+          Current
+        </label>
+      </div>
+      <textarea style="${inputStyle()}resize:vertical;height:56px;" placeholder="What you did — key achievements, technologies used…"
+        oninput="expData[${i}].description=this.value;syncJSON('structured_experience_json',expData)">${e.description}</textarea>
+    </div>`).join('');
+}
+
+function removeExp(i) {
+  expData.splice(i, 1);
+  renderExpRows();
+  syncJSON('structured_experience_json', expData);
+}
+
+/* ── Education Builder ───────────────────────────────────────── */
+function addEduRow(obj) {
+  eduData.push(obj || { institution:'', degree:'', field:'', startYear:'', endYear:'' });
+  renderEduRows();
+  syncJSON('structured_education_json', eduData);
+}
+
+function renderEduRows() {
+  const c = document.getElementById('edu-rows');
+  if (!c) return;
+  c.innerHTML = eduData.map((e, i) => `
+    <div style="${rowStyle()}flex-direction:column;">
+      <div style="display:flex;gap:8px;width:100%">
+        <input style="${inputStyle()}" type="text" placeholder="Institution"
+          value="${e.institution}" oninput="eduData[${i}].institution=this.value;syncJSON('structured_education_json',eduData)">
+        <input style="${inputStyle()}" type="text" placeholder="Degree (e.g. BSc)"
+          value="${e.degree}" oninput="eduData[${i}].degree=this.value;syncJSON('structured_education_json',eduData)">
+        ${removeBtn(`removeEdu(${i})`)}
+      </div>
+      <div style="display:flex;gap:8px;width:100%">
+        <input style="${inputStyle()}" type="text" placeholder="Field (e.g. Computer Science)"
+          value="${e.field}" oninput="eduData[${i}].field=this.value;syncJSON('structured_education_json',eduData)">
+        <input style="${inputStyle()}flex:0 0 80px;width:80px;" type="text" placeholder="From"
+          value="${e.startYear}" oninput="eduData[${i}].startYear=this.value;syncJSON('structured_education_json',eduData)">
+        <input style="${inputStyle()}flex:0 0 80px;width:80px;" type="text" placeholder="To"
+          value="${e.endYear}" oninput="eduData[${i}].endYear=this.value;syncJSON('structured_education_json',eduData)">
+      </div>
+    </div>`).join('');
+}
+
+function removeEdu(i) {
+  eduData.splice(i, 1);
+  renderEduRows();
+  syncJSON('structured_education_json', eduData);
+}
+
+/* ── Certifications Builder ──────────────────────────────────── */
+function addCertRow(obj) {
+  certData.push(obj || { name:'', issuer:'', date:'' });
+  renderCertRows();
+  syncJSON('certifications_data_json', certData);
+}
+
+function renderCertRows() {
+  const c = document.getElementById('cert-rows');
+  if (!c) return;
+  c.innerHTML = certData.map((cert, i) => `
+    <div style="${rowStyle()}">
+      <input style="${inputStyle()}" type="text" placeholder="Certification name"
+        value="${cert.name}" oninput="certData[${i}].name=this.value;syncJSON('certifications_data_json',certData)">
+      <input style="${inputStyle()}" type="text" placeholder="Issuer (e.g. AWS)"
+        value="${cert.issuer}" oninput="certData[${i}].issuer=this.value;syncJSON('certifications_data_json',certData)">
+      <input style="${inputStyle()}flex:0 0 90px;width:90px;" type="text" placeholder="Year"
+        value="${cert.date}" oninput="certData[${i}].date=this.value;syncJSON('certifications_data_json',certData)">
+      ${removeBtn(`removeCert(${i})`)}
+    </div>`).join('');
+}
+
+function removeCert(i) {
+  certData.splice(i, 1);
+  renderCertRows();
+  syncJSON('certifications_data_json', certData);
+}
+
+/* ── Projects Builder ────────────────────────────────────────── */
+function addProjRow(obj) {
+  projData.push(obj || { name:'', description:'', url:'', skills:[], isFeatured:false });
+  renderProjRows();
+  syncJSON('structured_projects_json', projData);
+}
+
+function renderProjRows() {
+  const c = document.getElementById('proj-rows');
+  if (!c) return;
+  c.innerHTML = projData.map((p, i) => `
+    <div style="${rowStyle()}flex-direction:column;">
+      <div style="display:flex;gap:8px;width:100%">
+        <input style="${inputStyle()}" type="text" placeholder="Project name"
+          value="${p.name}" oninput="projData[${i}].name=this.value;syncJSON('structured_projects_json',projData)">
+        <input style="${inputStyle()}" type="url" placeholder="URL (optional)"
+          value="${p.url}" oninput="projData[${i}].url=this.value;syncJSON('structured_projects_json',projData)">
+        ${removeBtn(`removeProj(${i})`)}
+      </div>
+      <textarea style="${inputStyle()}resize:vertical;height:60px;" placeholder="What it does, your role, technologies used…"
+        oninput="projData[${i}].description=this.value;syncJSON('structured_projects_json',projData)">${p.description}</textarea>
+    </div>`).join('');
+}
+
+function removeProj(i) {
+  projData.splice(i, 1);
+  renderProjRows();
+  syncJSON('structured_projects_json', projData);
+}
+
+/* ── CV Parse + Autofill ─────────────────────────────────────── */
 const cvInput    = document.getElementById('cv-parse-input');
 const cvDropArea = document.getElementById('cv-drop-area');
 const cvStatus   = document.getElementById('cv-parse-status');
 
-cvInput.addEventListener('change', function() {
-  if (this.files[0]) handleCVFile(this.files[0]);
-});
-
+cvInput.addEventListener('change', function() { if (this.files[0]) handleCVFile(this.files[0]); });
 cvDropArea.addEventListener('dragover', e => { e.preventDefault(); cvDropArea.classList.add('drag-over'); });
 cvDropArea.addEventListener('dragleave', () => cvDropArea.classList.remove('drag-over'));
 cvDropArea.addEventListener('drop', e => {
@@ -238,21 +606,13 @@ async function handleCVFile(file) {
   document.getElementById('cv-drop-title').textContent = file.name;
   cvDropArea.classList.add('has-file');
   showCVStatus('loading', 'Reading your CV — this takes a second…');
-
   const fd = new FormData();
   fd.append('resume', file);
-
   try {
     const resp = await fetch(`/jobs/${JOB_ID}/parse-resume`, { method: 'POST', body: fd });
     const data = await resp.json();
-
-    if (!data.ok) {
-      showCVStatus('error', data.error || 'Could not read your CV. Fill in manually below.');
-      return;
-    }
-
+    if (!data.ok) { showCVStatus('error', data.error || 'Could not read your CV. Fill in manually below.'); return; }
     const filled = fillFields(data.fields || {});
-
     try {
       const dt = new DataTransfer();
       dt.items.add(parsedFile);
@@ -260,16 +620,12 @@ async function handleCVFile(file) {
       document.getElementById('resume-label').textContent = file.name;
       document.getElementById('resume-drop').classList.add('file-selected');
     } catch(e) {}
-
     showCVStatus('success',
       filled > 0
         ? filled + ' field' + (filled !== 1 ? 's' : '') + ' filled — review below before submitting.'
         : 'CV uploaded. We could not extract text — please fill in the details below.'
     );
-
-    setTimeout(() => {
-      document.querySelector('.apply-section-label').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 300);
+    setTimeout(() => { document.querySelector('.apply-section-label').scrollIntoView({ behavior:'smooth', block:'start' }); }, 300);
   } catch(e) {
     showCVStatus('error', 'Upload failed. Check your connection and try again.');
   }
@@ -281,18 +637,14 @@ function fillFields(f) {
     ['email',            'f-email'],
     ['phone',            'f-phone'],
     ['location',         'f-location'],
-    ['skills',           'f-skills'],
     ['years_experience', 'f-exp'],
     ['education',        'f-edu'],
-    ['projects',         'projects'],
   ];
   let count = 0;
   map.forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (el && f[key] !== undefined && String(f[key]) !== '') {
-      el.value = f[key];
-      el.classList.add('autofilled');
-      count++;
+      el.value = f[key]; el.classList.add('autofilled'); count++;
     }
   });
   if (f.education_level) {
@@ -300,8 +652,11 @@ function fillFields(f) {
     const opt = [...sel.options].find(o => o.value === f.education_level);
     if (opt) { sel.value = f.education_level; sel.classList.add('autofilled'); count++; }
   }
-  const pf = document.getElementById('projects');
-  if (pf) pf.dispatchEvent(new Event('input'));
+  // Autofill skills builder from parsed skills
+  if (f.skills && typeof f.skills === 'string') {
+    f.skills.split(',').map(s => s.trim()).filter(Boolean).forEach(s => addSkillRow(s));
+    count++;
+  }
   return count;
 }
 
@@ -323,18 +678,41 @@ document.getElementById('resume-input').addEventListener('change', function() {
   }
 });
 
-const pf = document.getElementById('projects');
-const ph = document.getElementById('project-count-hint');
-if (pf && ph) {
-  pf.addEventListener('input', function() {
-    const n = this.value.split('\n').filter(l => l.trim()).length;
-    ph.textContent = n + ' project' + (n !== 1 ? 's' : '') + ' detected';
-  });
-}
+/* ── Section progress tracker ────────────────────────────────── */
+(function() {
+  const fpLabel    = document.getElementById('fp-label');
+  const fpFraction = document.getElementById('fp-fraction');
+  const fpFill     = document.getElementById('fp-fill');
+  if (!fpLabel) return;
 
-document.getElementById('apply-form').addEventListener('submit', function() {
-  const btn = this.querySelector('button[type="submit"]');
-  if (btn && window.btnLoading) window.btnLoading(btn, true);
+  function updateProgress() {
+    const labels = [...document.querySelectorAll('.apply-section-label')];
+    const total = labels.length;
+    let active = 0;
+    labels.forEach((el, i) => {
+      if (el.getBoundingClientRect().top <= 120) active = i;
+    });
+    fpLabel.textContent    = labels[active]?.textContent?.trim() || '';
+    fpFraction.textContent = `Step ${active + 1} of ${total}`;
+    fpFill.style.width     = ((active + 1) / total * 100).toFixed(1) + '%';
+  }
+
+  window.addEventListener('scroll', updateProgress, { passive: true });
+  updateProgress();
+})();
+
+/* ── Form submit — serialize JSON + disable btn ──────────────── */
+document.getElementById('apply-form').addEventListener('submit', function(e) {
+  // Sync all builders one final time
+  syncSkillsAll();
+  syncJSON('languages_data_json', langsData);
+  syncJSON('structured_experience_json', expData);
+  syncJSON('structured_education_json', eduData);
+  syncJSON('certifications_data_json', certData);
+  syncJSON('structured_projects_json', projData);
+
+  const btn = document.getElementById('apply-submit-btn');
+  if (btn) { btn.disabled = true; btn.querySelector('.btn-text').textContent = 'Submitting…'; }
 });
 </script>
 {% endblock %}

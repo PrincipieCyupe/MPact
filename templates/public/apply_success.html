@@ -4,18 +4,70 @@
 {% block title %}Application Submitted — {{ brand_name }}{% endblock %}
 
 {% block content %}
-<div class="container">
-  <div class="apply-success" style="padding:80px 24px">
-    <div class="apply-success-icon">
-      {{ icon_check_circle() }}
+<div class="container" style="padding:80px 24px;max-width:600px;margin:0 auto">
+
+  <div style="text-align:center;margin-bottom:32px">
+    <div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;background:#ECFDF5;border-radius:50%;margin-bottom:20px">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
-    <h2>Application submitted</h2>
-    <p class="text-secondary" style="margin-top:8px;margin-bottom:8px">Thanks, {{ applicant.full_name }}! Your application for <strong>{{ job.title }}</strong> has been received.</p>
-    <p class="text-tertiary text-sm" style="margin-bottom:28px">Our team will review your profile and reach out if there's a match.</p>
-    <div class="flex gap-sm justify-center">
-      <a href="{{ url_for('public.jobs_list') }}" class="btn btn-primary">Browse more roles {{ icon_arrow_right() }}</a>
-      <a href="{{ url_for('public.job_detail', job_id=job.id) }}" class="btn btn-secondary">Back to job</a>
+    <h1 style="margin:0 0 8px;font-size:28px;font-weight:800;color:#09090B;letter-spacing:-.03em">Application submitted!</h1>
+    <p style="margin:0;color:#6B7280;font-size:16px;line-height:1.6">
+      Thanks, <strong style="color:#09090B">{{ applicant.full_name }}</strong>! Your application for
+      <strong style="color:#09090B">{{ job.title }}</strong> has been received.
+    </p>
+  </div>
+
+  <!-- Reference number -->
+  <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:20px 24px;margin-bottom:24px;text-align:center">
+    <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em">Your reference number</p>
+    <p style="margin:0;font-family:'JetBrains Mono',monospace,monospace;font-size:22px;font-weight:700;color:#09090B;letter-spacing:.06em">
+      MPT-{{ "%04d"|format(job.id) }}-{{ "%05d"|format(applicant.id) }}
+    </p>
+    <p style="margin:6px 0 0;font-size:12px;color:#9CA3AF">Keep this in case you need to follow up.</p>
+  </div>
+
+  <!-- What happens next -->
+  <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:24px;margin-bottom:24px">
+    <p style="margin:0 0 16px;font-size:13px;font-weight:700;color:#09090B;text-transform:uppercase;letter-spacing:.05em">What happens next</p>
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <div style="flex-shrink:0;width:28px;height:28px;background:#635BFF;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">1</div>
+        <div>
+          <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#09090B">AI screening</p>
+          <p style="margin:0;font-size:13px;color:#6B7280;line-height:1.5">Our AI analyzes your profile against the role requirements — usually within 24 hours.</p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <div style="flex-shrink:0;width:28px;height:28px;background:#635BFF;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">2</div>
+        <div>
+          <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#09090B">Recruiter review</p>
+          <p style="margin:0;font-size:13px;color:#6B7280;line-height:1.5">A recruiter reviews the AI results and makes the final shortlist decision.</p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <div style="flex-shrink:0;width:28px;height:28px;background:#635BFF;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">3</div>
+        <div>
+          <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#09090B">You'll hear from us</p>
+          <p style="margin:0;font-size:13px;color:#6B7280;line-height:1.5">If shortlisted, you'll receive an email with next steps. Check your inbox{% if applicant.email %} at <strong>{{ applicant.email }}</strong>{% endif %}.</p>
+        </div>
+      </div>
+
     </div>
   </div>
+
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <a href="{{ url_for('public.jobs_list') }}" class="btn btn-primary">Browse more roles {{ icon_arrow_right() }}</a>
+    <a href="{{ url_for('public.application_status') }}" class="btn btn-secondary">Check status later</a>
+  </div>
+
+  <p style="text-align:center;margin-top:16px;font-size:13px;color:#9CA3AF">
+    Use your reference number <strong style="font-family:'JetBrains Mono',monospace;color:#374151">MPT-{{ "%04d"|format(job.id) }}-{{ "%05d"|format(applicant.id) }}</strong>
+    and your email to look up your status anytime at
+    <a href="{{ url_for('public.application_status') }}" style="color:#635BFF;text-decoration:none;font-weight:600">mpact.io/application/status</a>.
+  </p>
+
 </div>
 {% endblock %}

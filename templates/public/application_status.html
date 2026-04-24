@@ -1,0 +1,162 @@
+{% extends "public/base.html" %}
+
+{% block title %}Check Application Status — {{ brand_name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding:80px 24px;max-width:560px;margin:0 auto">
+
+  <div style="text-align:center;margin-bottom:36px">
+    <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:#EEF2FF;border-radius:14px;margin-bottom:18px">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#635BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </div>
+    <h1 style="margin:0 0 8px;font-size:26px;font-weight:800;color:#09090B;letter-spacing:-.03em">Check your application</h1>
+    <p style="margin:0;color:#6B7280;font-size:15px;line-height:1.6">Enter the email you applied with and your reference number.</p>
+  </div>
+
+  <!-- Lookup form -->
+  <div style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:28px;margin-bottom:24px">
+    <form method="POST" action="{{ url_for('public.application_status') }}">
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px">Email address</label>
+        <input
+          type="email"
+          name="email"
+          required
+          placeholder="you@example.com"
+          value="{{ request.form.get('email', '') }}"
+          style="width:100%;padding:10px 14px;border:1px solid #D1D5DB;border-radius:8px;font-size:14px;color:#09090B;outline:none;box-sizing:border-box"
+        >
+      </div>
+      <div style="margin-bottom:22px">
+        <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px">Reference number</label>
+        <input
+          type="text"
+          name="reference"
+          required
+          placeholder="MPT-0001-00001"
+          value="{{ request.form.get('reference', '') }}"
+          style="width:100%;padding:10px 14px;border:1px solid #D1D5DB;border-radius:8px;font-size:14px;font-family:'JetBrains Mono',monospace;color:#09090B;outline:none;box-sizing:border-box;text-transform:uppercase"
+        >
+        <p style="margin:5px 0 0;font-size:12px;color:#9CA3AF">Found in your confirmation email, e.g. MPT-0001-00001</p>
+      </div>
+
+      {% if error %}
+      <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:12px 16px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style="font-size:13px;color:#991B1B">{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">
+        Look up application
+      </button>
+    </form>
+  </div>
+
+  {% if applicant %}
+  {% set status_map = {
+    'new':         ('Received',    '#6366F1', '#EEF2FF'),
+    'reviewed':    ('Under Review','#D97706', '#FFFBEB'),
+    'shortlisted': ('Shortlisted', '#059669', '#ECFDF5'),
+    'interview':   ('Interview',   '#0EA5E9', '#F0F9FF'),
+    'rejected':    ('Not Selected','#EF4444', '#FEF2F2'),
+  } %}
+  {% set label, color, bg = status_map.get(applicant.status, ('Received','#6366F1','#EEF2FF')) %}
+
+  <!-- Result card -->
+  <div style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:28px;margin-bottom:24px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <p style="margin:0 0 2px;font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em">Application for</p>
+        <p style="margin:0;font-size:17px;font-weight:700;color:#09090B">{{ applicant.job.title }}</p>
+        <p style="margin:2px 0 0;font-size:13px;color:#6B7280">{{ applicant.job.company or brand_name }}{% if applicant.job.location %} · {{ applicant.job.location }}{% endif %}</p>
+      </div>
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;background:{{ bg }};color:{{ color }}">
+        <span style="width:7px;height:7px;border-radius:50%;background:{{ color }};display:inline-block"></span>
+        {{ label }}
+      </span>
+    </div>
+
+    <div style="border-top:1px solid #F3F4F6;padding-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <p style="margin:0 0 2px;font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.05em">Applicant</p>
+        <p style="margin:0;font-size:14px;font-weight:600;color:#09090B">{{ applicant.full_name }}</p>
+      </div>
+      <div>
+        <p style="margin:0 0 2px;font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.05em">Reference</p>
+        <p style="margin:0;font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#09090B">MPT-{{ "%04d"|format(applicant.job_id) }}-{{ "%05d"|format(applicant.id) }}</p>
+      </div>
+      <div>
+        <p style="margin:0 0 2px;font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.05em">Submitted</p>
+        <p style="margin:0;font-size:14px;color:#374151">{{ applicant.created_at.strftime('%d %b %Y') if applicant.created_at else '—' }}</p>
+      </div>
+      <div>
+        <p style="margin:0 0 2px;font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.05em">AI Screened</p>
+        <p style="margin:0;font-size:14px;color:#374151">{{ applicant.screened_at.strftime('%d %b %Y') if applicant.screened_at else 'Pending' }}</p>
+      </div>
+    </div>
+
+    <!-- Status timeline -->
+    <div style="border-top:1px solid #F3F4F6;padding-top:20px;margin-top:18px">
+      <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.05em">Progress</p>
+      {% set steps = [('new','Received'),('reviewed','Under Review'),('shortlisted','Shortlisted'),('interview','Interview')] %}
+      {% set status_order = ['new','reviewed','shortlisted','interview','rejected'] %}
+      {% set cur_idx = status_order.index(applicant.status) if applicant.status in status_order else 0 %}
+      {% if applicant.status == 'rejected' %}
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#FEF2F2;border-radius:10px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <p style="margin:0;font-size:13px;color:#991B1B">This application was not selected for further consideration. Thank you for your interest.</p>
+      </div>
+      {% else %}
+      <div style="display:flex;align-items:center;gap:0">
+        {% for step_key, step_label in steps %}
+        {% set s_idx = loop.index0 %}
+        {% set done = cur_idx > s_idx %}
+        {% set active = cur_idx == s_idx %}
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;position:relative">
+          {% if not loop.first %}
+          <div style="position:absolute;top:11px;right:50%;width:100%;height:2px;background:{% if done %}#635BFF{% else %}#E5E7EB{% endif %};z-index:0"></div>
+          {% endif %}
+          <div style="width:22px;height:22px;border-radius:50%;border:2px solid {% if done or active %}#635BFF{% else %}#D1D5DB{% endif %};background:{% if done %}#635BFF{% elif active %}#EEF2FF{% else %}#fff{% endif %};display:flex;align-items:center;justify-content:center;z-index:1;flex-shrink:0">
+            {% if done %}
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            {% elif active %}
+            <div style="width:8px;height:8px;border-radius:50%;background:#635BFF"></div>
+            {% endif %}
+          </div>
+          <p style="margin:6px 0 0;font-size:10px;font-weight:{% if active %}700{% else %}500{% endif %};color:{% if done or active %}#635BFF{% else %}#9CA3AF{% endif %};text-align:center">{{ step_label }}</p>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {% if applicant.status == 'shortlisted' %}
+  <div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><polyline points="20 6 9 17 4 12"/></svg>
+    <div>
+      <p style="margin:0 0 2px;font-size:14px;font-weight:700;color:#065F46">Congratulations — you've been shortlisted!</p>
+      <p style="margin:0;font-size:13px;color:#047857;line-height:1.5">The recruiter will contact you with next steps. Check your inbox at <strong>{{ applicant.email }}</strong>.</p>
+    </div>
+  </div>
+  {% elif applicant.status == 'interview' %}
+  <div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <div>
+      <p style="margin:0 0 2px;font-size:14px;font-weight:700;color:#0C4A6E">Interview stage!</p>
+      <p style="margin:0;font-size:13px;color:#0369A1;line-height:1.5">You've been invited to interview. Check your email at <strong>{{ applicant.email }}</strong> for scheduling details.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}
+
+  <div style="text-align:center">
+    <a href="{{ url_for('public.jobs_list') }}" style="font-size:14px;color:#635BFF;text-decoration:none;font-weight:600">← Browse open roles</a>
+  </div>
+
+</div>
+{% endblock %}

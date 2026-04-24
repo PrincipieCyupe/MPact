@@ -19,9 +19,9 @@
         {{ brand_name }}
       </a>
       <div class="nav-links">
-        <a href="{{ url_for('public.jobs_list') }}" class="{% if request.path.startswith('/jobs') %}active{% endif %}">{{ icon_briefcase() }} Jobs</a>
-        <a href="{{ url_for('admin_auth.login') }}" class="btn btn-sm" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.14)">Recruiter Login</a>
-        <a href="{{ url_for('admin_auth.register') }}" class="btn btn-sm btn-primary">Get started</a>
+        <a href="{{ url_for('public.jobs_list') }}" class="{% if request.path.startswith('/jobs') %}active{% endif %}">{{ icon_briefcase() }} <span class="nav-link-text">Jobs</span></a>
+        <a href="{{ url_for('admin_auth.login') }}" class="btn btn-sm" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.14)"><span class="nav-btn-full">Recruiter Login</span><span class="nav-btn-short">Login</span></a>
+        <a href="{{ url_for('admin_auth.register') }}" class="btn btn-sm btn-primary"><span class="nav-btn-full">Get started</span><span class="nav-btn-short">Sign up</span></a>
       </div>
     </div>
   </nav>
@@ -48,12 +48,14 @@
         <div class="footer-links">
           <h5>Platform</h5>
           <a href="{{ url_for('public.jobs_list') }}">Browse Jobs</a>
+          <a href="{{ url_for('public.application_status') }}">Check Application Status</a>
           <a href="{{ url_for('admin_auth.login') }}">Recruiter Dashboard</a>
         </div>
         <div class="footer-links">
           <h5>About</h5>
-          <a href="#">Our Mission</a>
-          <a href="#">Team M&amp;P</a>
+          <a href="{{ url_for('public.landing') }}#mission">Our Mission</a>
+          <a href="{{ url_for('public.landing') }}#team">Team M&amp;P</a>
+          <a href="{{ url_for('public.landing') }}#pricing">Pricing</a>
         </div>
       </div>
       <div class="footer-bottom">&copy; 2026 {{ brand_name }}. Built with care in Kigali.</div>

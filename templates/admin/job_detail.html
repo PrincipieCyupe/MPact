@@ -28,6 +28,14 @@
     </div>
     <div class="flex gap-sm flex-wrap">
       <a href="{{ url_for('admin_screening.index', job_id=job.id) }}" class="btn btn-primary btn-sm">{{ icon_bar_chart() }} Screen</a>
+      {% if job.is_published %}
+      <button id="copy-link-btn" class="btn btn-secondary btn-sm"
+              onclick="copyJobLink('{{ url_for('public.job_detail', job_id=job.id, _external=True) }}', this)"
+              title="Copy public application link">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy link
+      </button>
+      {% endif %}
       <a href="{{ url_for('admin_jobs.import_csv', job_id=job.id) }}" class="btn btn-secondary btn-sm">📂 Import CSV</a>
       <a href="{{ url_for('admin_jobs.job_edit', job_id=job.id) }}" class="btn btn-secondary btn-sm">Edit</a>
     </div>
@@ -129,4 +137,18 @@
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyJobLink(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+    btn.style.borderColor = 'var(--success)';
+    btn.style.color = 'var(--success)';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.borderColor = ''; btn.style.color = ''; }, 2000);
+  }).catch(() => { window.prompt('Copy this link:', url); });
+}
+</script>
 {% endblock %}

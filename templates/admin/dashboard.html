@@ -69,32 +69,61 @@
     <div class="card" style="overflow:hidden">
       {% for job in recent_jobs %}
       <a href="{{ url_for('admin_jobs.job_detail', job_id=job.id) }}"
-         style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:{% if not loop.last %}1px solid var(--border-light){% else %}none{% endif %};text-decoration:none;color:inherit;transition:background var(--t-fast)"
+         style="display:block;padding:14px 20px;border-bottom:{% if not loop.last %}1px solid var(--border-light){% else %}none{% endif %};text-decoration:none;color:inherit;transition:background var(--t-fast)"
          onmouseover="this.style.background='var(--bg-inset)'" onmouseout="this.style.background=''">
-        <div style="flex:1;min-width:0">
-          <div class="font-semibold" style="font-size:.9375rem;letter-spacing:-.015em;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ job.title }}</div>
-          <div class="text-xs text-tertiary">{{ job.meta_line }}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:16px">
-          <div style="text-align:right">
-            <div class="font-mono font-bold" style="font-size:.875rem;color:var(--text-primary)">{{ job.applicant_count }}</div>
-            <div class="text-xs text-tertiary">applicants</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="flex:1;min-width:0">
+            <div class="font-semibold" style="font-size:.9375rem;letter-spacing:-.015em;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ job.title }}</div>
+            <div class="text-xs text-tertiary">{{ job.meta_line }}</div>
           </div>
-          {% if job.screened_count > 0 %}
-          <span class="badge badge-success">{{ job.screened_count }} screened</span>
-          {% else %}
-          <span class="badge badge-muted">Not screened</span>
-          {% endif %}
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:16px;text-align:right">
+            <div>
+              <div class="font-mono font-bold" style="font-size:.875rem;color:var(--text-primary)">{{ job.applicant_count }}</div>
+              <div class="text-xs text-tertiary">applicants</div>
+            </div>
+          </div>
         </div>
+        <!-- Hiring pipeline mini funnel -->
+        {% set total = job.applicant_count %}
+        {% if total > 0 %}
+        <div style="display:flex;gap:6px;align-items:center">
+          <div style="flex:1;height:5px;background:var(--border-light);border-radius:3px;overflow:hidden;position:relative">
+            <div style="position:absolute;left:0;top:0;height:100%;width:100%;background:var(--bg-inset);border-radius:3px"></div>
+            <div style="position:absolute;left:0;top:0;height:100%;width:{{ [((job.screened_count / total) * 100)|round(0)|int, 100]|min }}%;background:var(--accent);border-radius:3px;transition:width .6s var(--ease)"></div>
+            <div style="position:absolute;left:0;top:0;height:100%;width:{{ [((job.shortlist_count / total) * 100)|round(0)|int, 100]|min }}%;background:var(--success);border-radius:3px;transition:width .6s var(--ease)"></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-shrink:0">
+            <span class="text-xs text-tertiary" title="Received">{{ total }} rcvd</span>
+            <span class="text-xs" style="color:var(--accent)" title="Screened by AI">{{ job.screened_count }} screened</span>
+            <span class="text-xs" style="color:var(--success)" title="AI recommended">{{ job.shortlist_count }} fit</span>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-xs text-tertiary">No applications yet · <a href="{{ url_for('admin_jobs.job_detail', job_id=job.id) }}" style="color:var(--accent)">Share job link</a></div>
+        {% endif %}
       </a>
       {% endfor %}
     </div>
     {% else %}
-    <div class="card" style="padding:48px 24px;text-align:center">
-      <div style="width:48px;height:48px;background:var(--accent-light);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;color:var(--accent);margin:0 auto 16px">{{ icon_briefcase() }}</div>
-      <div class="font-semibold" style="margin-bottom:6px">No jobs posted yet</div>
-      <p class="text-sm text-tertiary" style="margin-bottom:20px">Create your first job listing to start receiving applications.</p>
-      <a href="{{ url_for('admin_jobs.job_create') }}" class="btn btn-primary btn-sm">{{ icon_plus() }} Post your first job</a>
+    <div class="card" style="padding:32px 28px">
+      <div style="margin-bottom:20px">
+        <div class="font-semibold" style="margin-bottom:4px">Welcome — here's how to get started</div>
+        <p class="text-sm text-tertiary">Three steps to your first AI-screened shortlist.</p>
+      </div>
+      {% for step_n, step_title, step_body, step_link, step_label in [
+        (1, 'Post a job', 'Set the title, required skills, and experience expectations. Optionally add custom screening questions specific to the role.', url_for('admin_jobs.job_create'), 'Create job'),
+        (2, 'Collect applications', 'Share your public job link. Candidates apply directly — no login needed. Or import existing CVs from a CSV file.', url_for('admin_jobs.jobs_list'), 'View jobs'),
+        (3, 'Run AI screening', 'Click "Screen Candidates" and Gemini evaluates everyone at once — scoring, reasoning, and bias flags all in under 15 seconds.', url_for('admin_screening.index'), 'Go to screening'),
+      ] %}
+      <div style="display:flex;gap:14px;padding:14px 0;{% if not loop.last %}border-bottom:1px solid var(--border-light);{% endif %}">
+        <div style="flex-shrink:0;width:26px;height:26px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:#fff">{{ step_n }}</div>
+        <div style="flex:1">
+          <div class="font-semibold text-sm" style="margin-bottom:3px">{{ step_title }}</div>
+          <p class="text-xs text-tertiary" style="margin:0 0 8px;line-height:1.55">{{ step_body }}</p>
+          <a href="{{ step_link }}" class="btn btn-secondary btn-sm" style="font-size:.75rem;padding:4px 12px">{{ step_label }} →</a>
+        </div>
+      </div>
+      {% endfor %}
     </div>
     {% endif %}
   </div>
@@ -107,6 +136,12 @@
         <p class="text-xs text-tertiary" style="margin-top:2px">Highest scoring screened applicants</p>
       </div>
       <a href="{{ url_for('admin_screening.index') }}" class="btn btn-ghost btn-sm">Screening {{ icon_arrow_right() }}</a>
+    </div>
+
+    <!-- AI model badge -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 2L13.8 8.6L20.6 8.6L15 12.4L16.8 19L12 15.2L7.2 19L9 12.4L3.4 8.6L10.2 8.6Z" fill="#4285F4"/><path d="M12 2L13.8 8.6L20.6 8.6L15 12.4" fill="#EA4335"/><path d="M15 12.4L16.8 19L12 15.2" fill="#FBBC05"/><path d="M12 15.2L7.2 19L9 12.4L3.4 8.6L10.2 8.6L12 2" fill="#34A853"/></svg>
+      <span class="text-xs text-tertiary">AI-ranked by <strong style="color:var(--text-secondary)">{{ gemini_model }}</strong> · 60% deterministic + 40% AI blended</span>
     </div>
 
     {% if top_candidates %}
@@ -122,6 +157,14 @@
           <div class="text-xs text-tertiary" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.job.title }}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+          {% if c.ai_score and c.weighted_score %}
+            {% set delta = (c.ai_score - c.weighted_score)|round(1) %}
+            {% if delta > 2 %}
+            <span style="font-size:.65rem;font-weight:700;color:var(--success);background:var(--success-bg);border-radius:8px;padding:1px 6px" title="AI boosted by {{ delta }}">+{{ delta }}</span>
+            {% elif delta < -2 %}
+            <span style="font-size:.65rem;font-weight:700;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:1px 6px" title="AI reduced by {{ (delta * -1)|round(1) }}">{{ delta }}</span>
+            {% endif %}
+          {% endif %}
           <div style="text-align:right">
             <div class="score-value {{ 'high' if c.final_score >= 75 else ('mid' if c.final_score >= 50 else 'low') }} font-mono" style="font-size:.9rem">{{ c.final_score|round(1) }}</div>
           </div>

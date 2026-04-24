@@ -46,6 +46,15 @@
       </div>
     </div>
 
+    <!-- Powered by badge -->
+    <div style="display:flex;justify-content:center;margin-bottom:28px;padding:0 16px">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:7px 16px;flex-wrap:wrap;justify-content:center;max-width:100%">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M12 2L13.8 8.6L20.6 8.6L15 12.4L16.8 19L12 15.2L7.2 19L9 12.4L3.4 8.6L10.2 8.6Z" fill="#4285F4"/><path d="M12 2L13.8 8.6L20.6 8.6L15 12.4" fill="#EA4335"/><path d="M15 12.4L16.8 19L12 15.2" fill="#FBBC05"/><path d="M12 15.2L7.2 19L9 12.4L3.4 8.6L10.2 8.6L12 2" fill="#34A853"/></svg>
+        <span style="font-size:.78rem;font-weight:600;color:rgba(255,255,255,.75);letter-spacing:.01em;white-space:nowrap">Powered by Google Gemini AI</span>
+        <span class="hero-powered-sub" style="font-size:.68rem;color:rgba(255,255,255,.4);white-space:nowrap">· Batch evaluation · Bias detection · Explainable scoring</span>
+      </div>
+    </div>
+
     <!-- Trust Numbers -->
     <div class="trust-strip">
       <div class="trust-item">
@@ -154,7 +163,7 @@
 <!-- ═══════════ DIFFERENTIATORS ═══════════ -->
 <section style="padding:80px 0">
   <div class="container">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center">
+    <div class="landing-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center">
       <div class="reveal">
         <h5 style="color:var(--accent)">Why Mpact Is Different</h5>
         <h2 style="margin-top:10px;margin-bottom:16px">Built for fairness, not just speed</h2>
@@ -200,7 +209,7 @@
           </div>
 
           <!-- Score ring demo -->
-          <div class="flex items-center gap-lg" style="margin-bottom:20px">
+          <div class="flex items-center gap-lg" style="margin-bottom:20px;flex-wrap:wrap">
             <div class="score-ring" style="width:80px;height:80px">
               <svg width="80" height="80" viewBox="0 0 80 80">
                 <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg-inset)" stroke-width="8"/>
@@ -240,6 +249,202 @@
   </div>
 </section>
 
+<!-- ═══════════ HOW THE AI WORKS ═══════════ -->
+<section id="how-ai-works" style="padding:80px 0;background:var(--bg-inset)">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:48px" class="reveal">
+      <h5 style="color:var(--accent)">Under the Hood</h5>
+      <h2 style="margin-top:8px;margin-bottom:8px">How Mpact screens candidates</h2>
+      <p class="text-secondary" style="max-width:520px;margin:0 auto;font-size:.95rem;line-height:1.7">
+        Not a black box. Every score has a formula and every recommendation has a reason.
+      </p>
+    </div>
+
+    <div class="landing-2col reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+      <!-- Step diagram -->
+      <div style="display:flex;flex-direction:column;gap:4px">
+        {% set steps = [
+          ('1', 'var(--accent)', 'Deterministic scoring (60%)', 'Four-axis formula evaluates skills match via token overlap, experience ratio, education level, and project depth. No randomness — same input always produces the same score.'),
+          ('2', 'var(--success)', 'Gemini batch evaluation (40%)', 'All candidates are sent to Gemini 1.5 Flash in a single API call. The model reads each profile against the job requirements and produces a holistic fit score, written strengths, gaps, and a recommendation.'),
+          ('3', '#A78BFA', 'Bias detection', 'Gemini is explicitly instructed to flag name-based, location-based, and institution-prestige bias signals. Any flag is surfaced to the recruiter — not acted on automatically.'),
+          ('4', 'var(--warn)', 'Blended final score', 'Final = Weighted × 0.6 + AI × 0.4. The deterministic base keeps scores consistent; the AI component captures nuance that structured fields miss.'),
+        ] %}
+        {% for num, color, title, body in steps %}
+        <div style="display:flex;gap:16px;padding:20px 0;{% if not loop.last %}border-bottom:1px solid var(--border-light);{% endif %}">
+          <div style="flex-shrink:0;width:32px;height:32px;background:{{ color }};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;color:#fff">{{ num }}</div>
+          <div>
+            <div class="font-semibold" style="margin-bottom:5px;font-size:.9375rem">{{ title }}</div>
+            <p class="text-secondary text-sm" style="line-height:1.65;margin:0">{{ body }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Formula card -->
+      <div class="card" style="padding:28px">
+        <h4 style="margin-bottom:20px">Scoring Formula</h4>
+        <div style="font-family:var(--font-mono);font-size:.8rem;line-height:2.2;color:var(--text-secondary)">
+          <div><span style="color:var(--accent);font-weight:700">Skills</span> = matched_tokens / required_tokens × 100</div>
+          <div><span style="color:var(--accent);font-weight:700">Experience</span> = min(years / min_years, 1.5) × 100</div>
+          <div><span style="color:var(--accent);font-weight:700">Education</span> = level_score × threshold_multiplier</div>
+          <div><span style="color:var(--accent);font-weight:700">Projects</span> = 30 + count × 14, max 100</div>
+          <div style="border-top:1px solid var(--border-light);margin:12px 0;padding-top:12px">
+            <span style="color:var(--text-primary);font-weight:700">Weighted</span> = Σ(axis × weight) / 100
+          </div>
+          <div><span style="color:#A78BFA;font-weight:700">AI Score</span> = Gemini holistic fit (0–100)</div>
+          <div style="border-top:1px solid var(--border-light);margin:12px 0;padding-top:12px">
+            <span style="color:var(--success);font-weight:800;font-size:.9rem">Final = Weighted × 0.6 + AI × 0.4</span>
+          </div>
+        </div>
+        <div style="background:var(--accent-subtle);border-radius:var(--r-sm);padding:12px 14px;margin-top:16px">
+          <p class="text-xs text-secondary" style="margin:0;line-height:1.6">
+            Weights are recruiter-configurable per job. Skills, experience, education, and projects can each be tuned between 0–100%, as long as they sum to 100.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ PRICING ═══════════ -->
+<section id="pricing" style="padding:88px 0">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:48px" class="reveal">
+      <h5>Pricing</h5>
+      <h2 style="margin-top:8px;margin-bottom:8px">Transparent from the start</h2>
+      <p class="text-secondary" style="max-width:460px;margin:0 auto;font-size:.95rem">
+        No per-seat fees. No annual contracts. You only pay for what the AI actually uses.
+      </p>
+    </div>
+
+    <div class="landing-3col reveal" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;max-width:860px;margin:0 auto">
+      <!-- Free tier -->
+      <div class="card" style="padding:28px;text-align:center">
+        <div style="font-size:.78rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Starter</div>
+        <div style="font-size:2rem;font-weight:800;color:var(--text-primary);margin-bottom:4px">$0</div>
+        <div class="text-xs text-tertiary" style="margin-bottom:20px">free forever</div>
+        <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:24px">
+          {% for item in ['Up to 3 active jobs', '50 applicants / month', 'AI screening (Gemini free tier)', 'CSV import & export', 'Email notifications'] %}
+          <div style="display:flex;align-items:center;gap:8px;font-size:.84rem">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>{{ item }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <a href="{{ url_for('admin_auth.register') }}" class="btn btn-secondary" style="width:100%;justify-content:center">Get started free</a>
+      </div>
+
+      <!-- Growth tier -->
+      <div class="card" style="padding:28px;text-align:center;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,91,255,.12)">
+        <div style="font-size:.78rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Growth</div>
+        <div style="font-size:2rem;font-weight:800;color:var(--text-primary);margin-bottom:4px">$29<span style="font-size:1rem;font-weight:500;color:var(--text-tertiary)">/mo</span></div>
+        <div class="text-xs text-tertiary" style="margin-bottom:20px">+ ~$0.002 per AI screen</div>
+        <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:24px">
+          {% for item in ['Unlimited active jobs', 'Unlimited applicants', 'Priority Gemini batch calls', 'Resume auto-parsing', 'Custom application questions', 'Bias detection & flagging', 'Bulk shortlist & reject'] %}
+          <div style="display:flex;align-items:center;gap:8px;font-size:.84rem">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>{{ item }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <a href="{{ url_for('admin_auth.register') }}" class="btn btn-primary" style="width:100%;justify-content:center">Start free trial</a>
+      </div>
+
+      <!-- Enterprise tier -->
+      <div class="card" style="padding:28px;text-align:center">
+        <div style="font-size:.78rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Enterprise</div>
+        <div style="font-size:2rem;font-weight:800;color:var(--text-primary);margin-bottom:4px">Custom</div>
+        <div class="text-xs text-tertiary" style="margin-bottom:20px">volume pricing available</div>
+        <div style="display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:24px">
+          {% for item in ['Everything in Growth', 'Self-hosted deployment', 'Custom AI model selection', 'ATS / HRIS integration', 'Dedicated support', 'SLA guarantee'] %}
+          <div style="display:flex;align-items:center;gap:8px;font-size:.84rem">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>{{ item }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <a href="mailto:hello@mpact.rw" class="btn btn-secondary" style="width:100%;justify-content:center">Contact us</a>
+      </div>
+    </div>
+
+    <p class="text-xs text-tertiary" style="text-align:center;margin-top:20px">
+      Gemini API calls billed at Google's standard rate. For 100 candidates screened: approx. $0.20 total.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════ MISSION ═══════════ -->
+<section id="mission" style="padding:88px 0;background:var(--bg-inset)">
+  <div class="container" style="max-width:780px">
+    <div class="reveal">
+      <h5 style="color:var(--accent)">Why We Built This</h5>
+      <h2 style="margin-top:8px;margin-bottom:24px">Our Mission</h2>
+      <p style="font-size:1.05rem;line-height:1.85;color:var(--text-secondary);margin-bottom:20px">
+        We've watched good people get passed over — not because they weren't qualified, but because their CV landed at the wrong moment, got buried in a hundred-email inbox, or was judged in thirty seconds by someone already fatigued from the previous stack.
+      </p>
+      <p style="font-size:1.05rem;line-height:1.85;color:var(--text-secondary);margin-bottom:20px">
+        Africa's workforce is one of the fastest-growing in the world. The tools supporting it haven't kept up. Enterprise ATS platforms cost thousands of dollars a month and were built for HR teams in London and San Francisco. A startup in Kigali or a growing firm in Lagos shouldn't need a procurement budget just to run a fair, structured hiring process.
+      </p>
+      <p style="font-size:1.05rem;line-height:1.85;color:var(--text-secondary);margin-bottom:32px">
+        Mpact is our answer to that. Structured scoring, written AI reasoning, bias flags, configurable weights — all the things that make hiring both faster and fairer. And built in a way that keeps the recruiter fully in control. The AI surfaces. The human decides.
+      </p>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div style="text-align:center;flex:1;min-width:80px">
+          <div style="font-size:1.8rem;font-weight:800;color:var(--accent)">80%</div>
+          <div class="text-sm text-secondary">faster screening per role</div>
+        </div>
+        <div style="text-align:center;flex:1;min-width:80px">
+          <div style="font-size:1.8rem;font-weight:800;color:var(--success)">100%</div>
+          <div class="text-sm text-secondary">explainable — every score has a reason</div>
+        </div>
+        <div style="text-align:center;flex:1;min-width:80px">
+          <div style="font-size:1.8rem;font-weight:800;color:var(--warn)">$0</div>
+          <div class="text-sm text-secondary">to get started</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ TEAM ═══════════ -->
+<section id="team" style="padding:88px 0">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:48px" class="reveal">
+      <h5>The Builders</h5>
+      <h2 style="margin-top:8px;margin-bottom:8px">Team M&amp;P</h2>
+      <p class="text-secondary" style="max-width:480px;margin:0 auto;font-size:.95rem">
+        Mugisha and Principie — two developers from Kigali who got tired of watching brilliant people lose out to slow, opaque hiring processes and decided to build something better.
+      </p>
+    </div>
+
+    <div class="landing-2col reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:700px;margin:0 auto">
+      <!-- Mugisha -->
+      <div class="card" style="padding:32px;text-align:center">
+        <div class="avatar" style="width:72px;height:72px;font-size:1.5rem;font-weight:800;background:var(--accent-light);color:var(--accent);margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center">MK</div>
+        <div class="font-semibold" style="font-size:1.05rem;margin-bottom:4px">Mugisha Kayishema</div>
+        <div class="text-sm text-tertiary" style="margin-bottom:16px">Engineering & AI</div>
+        <p class="text-sm text-secondary" style="line-height:1.7;margin:0">
+          Builds the systems that make screening fast and honest. Spent too many hours reviewing CVs manually before deciding there had to be a smarter way that still kept humans in the loop.
+        </p>
+      </div>
+
+      <!-- Principie -->
+      <div class="card" style="padding:32px;text-align:center">
+        <div class="avatar" style="width:72px;height:72px;font-size:1.5rem;font-weight:800;background:#ECFDF5;color:#059669;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center">PC</div>
+        <div class="font-semibold" style="font-size:1.05rem;margin-bottom:4px">Principie Cyubahiro</div>
+        <div class="text-sm text-tertiary" style="margin-bottom:16px">Software Developer — Backend & Frontend</div>
+        <p class="text-sm text-secondary" style="line-height:1.7;margin:0">
+          Built the full stack — from the Flask routes and database models to the recruiter dashboard and applicant-facing UI. Believes software should solve real problems cleanly, without unnecessary complexity getting in the way.
+        </p>
+      </div>
+    </div>
+
+    <p class="text-sm text-tertiary" style="text-align:center;margin-top:32px">
+      Built during a hackathon. Kigali, Rwanda — 2026.
+    </p>
+  </div>
+</section>
+
 <!-- ═══════════ CTA ═══════════ -->
 <section style="padding:72px 0;background:#09090B;position:relative;overflow:hidden">
   <div style="position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent 5%,rgba(99,102,241,.85) 30%,rgba(167,139,250,.65) 70%,transparent 95%);z-index:1"></div>
@@ -250,10 +455,24 @@
       <h2 style="color:#fff;margin-top:8px;margin-bottom:12px;font-size:2rem">
         Cut screening time by 80%.<br>Keep humans in control.
       </h2>
-      <p style="color:rgba(255,255,255,.6);max-width:440px;margin:0 auto 32px;line-height:1.7">
+      <p style="color:rgba(255,255,255,.6);max-width:480px;margin:0 auto 16px;line-height:1.7">
         Post a job, collect applications, and let Mpact do the heavy lifting.
         Review AI-ranked candidates with full score transparency.
       </p>
+      <div style="display:flex;justify-content:center;gap:20px;margin-bottom:28px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          <span style="font-size:.78rem;color:rgba(255,255,255,.55)">No per-seat fees</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          <span style="font-size:.78rem;color:rgba(255,255,255,.55)">~$0.002 per candidate screened</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          <span style="font-size:.78rem;color:rgba(255,255,255,.55)">Built for African hiring teams</span>
+        </div>
+      </div>
       <div class="flex gap-sm justify-center flex-wrap">
         <a href="{{ url_for('admin_auth.login') }}" class="btn btn-xl btn-hero-primary">
           <span class="btn-text">Open Recruiter Dashboard</span>

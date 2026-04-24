@@ -19,6 +19,11 @@
     <p class="text-secondary text-sm" style="margin-top:4px">
       Top {{ limit }} candidates · ranked by fit score
     </p>
+    <div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:var(--bg-inset);border:1px solid var(--border-light);border-radius:20px;padding:4px 10px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L13.8 8.6L20.6 8.6L15 12.4L16.8 19L12 15.2L7.2 19L9 12.4L3.4 8.6L10.2 8.6Z" fill="#4285F4"/><path d="M12 2L13.8 8.6L20.6 8.6L15 12.4" fill="#EA4335"/><path d="M15 12.4L16.8 19L12 15.2" fill="#FBBC05"/><path d="M12 15.2L7.2 19L9 12.4L3.4 8.6L10.2 8.6L12 2" fill="#34A853"/></svg>
+      <span style="font-size:.72rem;font-weight:600;color:var(--text-tertiary)">Scored by {{ gemini_model }}</span>
+      <span style="font-size:.68rem;color:var(--text-tertiary);margin-left:2px">· 60% deterministic + 40% AI</span>
+    </div>
   </div>
 
   <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end">
@@ -51,34 +56,71 @@
 {% set notfit  = ranked|selectattr('ai_recommendation','equalto','not_fit')|list|length %}
 {% set biased  = ranked|selectattr('bias_flag')|list|length %}
 
-<div class="summary-pills">
-  <div class="summary-pill">
+<div class="summary-pills" id="filter-pills">
+  <button class="summary-pill filter-pill active" data-filter="all" onclick="filterCards('all')">
+    <span class="text-sm" style="font-weight:600">All</span>
+    <span class="pill-count">{{ ranked|length }}</span>
+  </button>
+  <button class="summary-pill filter-pill" data-filter="strong_fit" onclick="filterCards('strong_fit')">
     <span class="status-dot success"></span>
     <span class="pill-count" style="color:var(--success)">{{ strong }}</span>
     <span class="text-sm">Strong Fit</span>
-  </div>
-  <div class="summary-pill">
+  </button>
+  <button class="summary-pill filter-pill" data-filter="fit" onclick="filterCards('fit')">
     <span class="status-dot info"></span>
     <span class="pill-count" style="color:var(--info)">{{ fit }}</span>
     <span class="text-sm">Good Fit</span>
-  </div>
-  <div class="summary-pill">
+  </button>
+  <button class="summary-pill filter-pill" data-filter="maybe" onclick="filterCards('maybe')">
     <span class="status-dot warn"></span>
     <span class="pill-count" style="color:var(--warn)">{{ maybe }}</span>
     <span class="text-sm">Maybe</span>
-  </div>
-  <div class="summary-pill">
+  </button>
+  <button class="summary-pill filter-pill" data-filter="not_fit" onclick="filterCards('not_fit')">
     <span class="status-dot danger"></span>
     <span class="pill-count" style="color:var(--danger)">{{ notfit }}</span>
     <span class="text-sm">Not a Fit</span>
-  </div>
+  </button>
   {% if biased > 0 %}
-  <div class="summary-pill" style="border-color:var(--warn);background:var(--warn-bg)">
+  <button class="summary-pill filter-pill" data-filter="biased" onclick="filterCards('biased')" style="border-color:var(--warn);background:var(--warn-bg)">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     <span class="pill-count" style="color:var(--warn)">{{ biased }}</span>
     <span class="text-sm">Bias Flags</span>
-  </div>
+  </button>
   {% endif %}
+</div>
+
+<!-- AI Transparency callout -->
+<div class="card mt-md" style="border-left:3px solid var(--accent);margin-bottom:20px">
+  <div class="card-body-sm">
+    <div class="flex items-start gap-sm">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px"><path d="M12 2L13.8 8.6L20.6 8.6L15 12.4L16.8 19L12 15.2L7.2 19L9 12.4L3.4 8.6L10.2 8.6Z" fill="#4285F4"/><path d="M12 2L13.8 8.6L20.6 8.6L15 12.4" fill="#EA4335"/><path d="M15 12.4L16.8 19L12 15.2" fill="#FBBC05"/><path d="M12 15.2L7.2 19L9 12.4L3.4 8.6L10.2 8.6L12 2" fill="#34A853"/></svg>
+      <div style="flex:1">
+        <div class="flex justify-between items-start" style="flex-wrap:wrap;gap:8px">
+          <div>
+            <span class="text-sm font-semibold" style="color:var(--accent)">AI Screening Report</span>
+            <span class="text-xs text-tertiary" style="margin-left:10px">Model: <strong>{{ gemini_model }}</strong> · Method: Single batch API call · Formula: 60% deterministic + 40% AI</span>
+          </div>
+          <div class="flex gap-md" style="flex-wrap:wrap">
+            <span class="text-xs text-tertiary">{{ ranked|length }} candidates ranked</span>
+            <span class="text-xs" style="color:var(--success)">{{ ranked|selectattr('ai_recommendation','in',['strong_fit','fit'])|list|length }} AI-recommended</span>
+            {% set bias_n = ranked|selectattr('bias_flag')|list|length %}
+            {% if bias_n > 0 %}<span class="text-xs" style="color:var(--warn)">⚠ {{ bias_n }} bias flag{{ 's' if bias_n > 1 }}</span>{% endif %}
+          </div>
+        </div>
+        <p class="text-xs text-secondary" style="margin:6px 0 0;line-height:1.6">
+          Each candidate received written strengths, gaps, and a recommendation. The AI score reflects holistic profile fit; the deterministic score reflects structured criteria matching. Scores are blended — neither alone decides. Every bias signal is flagged for recruiter review, never acted on automatically.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- No filter results state -->
+<div id="filter-empty" style="display:none;text-align:center;padding:48px 24px;color:var(--text-tertiary)">
+  <div style="font-size:2rem;margin-bottom:12px">🔍</div>
+  <div class="font-semibold" style="margin-bottom:6px">No candidates match this filter</div>
+  <button class="btn btn-secondary btn-sm" onclick="filterCards('all')">Show all candidates</button>
 </div>
 
 <!-- Bulk action bar -->
@@ -111,6 +153,8 @@
   <div class="rank-card rank-{{ loop.index if loop.index <= 3 else 'n' }}"
        id="rank-card-{{ a.id }}"
        data-applicant-id="{{ a.id }}"
+       data-recommendation="{{ a.ai_recommendation or '' }}"
+       data-bias="{{ 'yes' if a.bias_flag else 'no' }}"
        onclick="handleCardClick(event, {{ a.id }})">
 
     <div class="rank-card-inner">
@@ -152,6 +196,14 @@
             </div>
           </div>
           <span class="badge badge-{{ a.recommendation_tone }}" style="margin-left:4px">{{ a.recommendation_label }}</span>
+          {% if a.ai_score and a.weighted_score %}
+            {% set ai_delta = (a.ai_score - a.weighted_score)|round(1) %}
+            {% if ai_delta > 2 %}
+            <span style="font-size:.68rem;font-weight:700;color:var(--success);background:var(--success-bg);border-radius:10px;padding:2px 7px;margin-left:2px" title="AI raised score by {{ ai_delta }} points vs deterministic">+{{ ai_delta }} AI</span>
+            {% elif ai_delta < -2 %}
+            <span style="font-size:.68rem;font-weight:700;color:var(--warn);background:var(--warn-bg);border-radius:10px;padding:2px 7px;margin-left:2px" title="AI lowered score by {{ (ai_delta * -1)|round(1) }} points vs deterministic">{{ ai_delta }} AI</span>
+            {% endif %}
+          {% endif %}
           {% if a.bias_flag %}
           <span class="bias-flag" title="{{ a.bias_notes or 'Potential bias signal detected' }}">
             ⚠ Bias flag
@@ -218,6 +270,8 @@
         <div class="flex gap-xs" onclick="event.stopPropagation()">
           <button class="btn btn-sm btn-success" style="padding:4px 10px;font-size:.75rem"
                   onclick="quickStatus({{ a.id }}, 'shortlisted', this)">✓ Shortlist</button>
+          <button class="btn btn-sm btn-primary" style="padding:4px 10px;font-size:.75rem"
+                  onclick="quickStatus({{ a.id }}, 'interview', this)">📅</button>
           <button class="btn btn-sm btn-ghost" style="padding:4px 10px;font-size:.75rem;color:var(--danger)"
                   onclick="quickStatus({{ a.id }}, 'rejected', this)">✕</button>
         </div>
@@ -242,9 +296,42 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+.filter-pill { cursor:pointer; border:none; background:var(--bg-card); transition:background .15s,box-shadow .15s; }
+.filter-pill:hover { background:var(--bg-inset); }
+.filter-pill.active { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 0 0 3px rgba(99,91,255,.18); }
+.filter-pill.active .text-sm, .filter-pill.active .pill-count { color:#fff !important; }
+.filter-pill.active .status-dot { opacity:.8; }
+</style>
 <script>
 const JOB_ID = {{ job.id }};
 let selectedIds = new Set();
+
+/* ── Recommendation filter ──────────────────────────────────────── */
+function filterCards(filter) {
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  const activePill = document.querySelector(`.filter-pill[data-filter="${filter}"]`);
+  if (activePill) activePill.classList.add('active');
+  let visible = 0;
+  document.querySelectorAll('.rank-card').forEach(card => {
+    let show = false;
+    if (filter === 'all') {
+      show = true;
+    } else if (filter === 'biased') {
+      show = card.dataset.bias === 'yes';
+    } else {
+      show = card.dataset.recommendation === filter;
+    }
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  const empty = document.getElementById('filter-empty');
+  const cards = document.getElementById('rank-cards');
+  if (empty && cards) {
+    empty.style.display = visible === 0 ? 'block' : 'none';
+    cards.style.display = visible === 0 ? 'none' : '';
+  }
+}
 
 /* ── Checkbox & bulk select ─────────────────────────────────────── */
 document.querySelectorAll('.rank-card').forEach(card => {
