@@ -15,6 +15,20 @@ def _migrate_db(db):
         "ALTER TABLE recruiters ADD COLUMN verification_token VARCHAR(100)",
         "ALTER TABLE recruiters ADD COLUMN token_expires_at DATETIME",
         "ALTER TABLE applicants ADD COLUMN custom_answers TEXT",
+        "ALTER TABLE applicants ADD COLUMN recruiter_notes TEXT",
+        "ALTER TABLE applicants ADD COLUMN headline VARCHAR(300)",
+        "ALTER TABLE applicants ADD COLUMN bio TEXT",
+        "ALTER TABLE applicants ADD COLUMN structured_skills TEXT",
+        "ALTER TABLE applicants ADD COLUMN languages_data TEXT",
+        "ALTER TABLE applicants ADD COLUMN structured_experience TEXT",
+        "ALTER TABLE applicants ADD COLUMN structured_education TEXT",
+        "ALTER TABLE applicants ADD COLUMN certifications_data TEXT",
+        "ALTER TABLE applicants ADD COLUMN structured_projects TEXT",
+        "ALTER TABLE applicants ADD COLUMN availability_status VARCHAR(40)",
+        "ALTER TABLE applicants ADD COLUMN availability_type VARCHAR(40)",
+        "ALTER TABLE applicants ADD COLUMN linkedin VARCHAR(300)",
+        "ALTER TABLE applicants ADD COLUMN github VARCHAR(300)",
+        "ALTER TABLE applicants ADD COLUMN portfolio_url VARCHAR(300)",
     ]
     with db.engine.connect() as conn:
         for sql in migrations:
@@ -57,6 +71,7 @@ def create_app():
             "brand_tagline": app.config.get("BRAND_TAGLINE", ""),
             "team_name":     app.config.get("TEAM_NAME", ""),
             "current_recruiter": recruiter,
+            "gemini_model":  app.config.get("GEMINI_MODEL", "gemini-1.5-flash"),
         }
 
     @app.errorhandler(404)
