@@ -33,4 +33,4 @@ class Config:
     # Branding
     BRAND_NAME = "Mpact"
     BRAND_TAGLINE = "Smart recruiting for African teams."
-    TEAM_NAME = "Team M&P — Mugisha & Principie"
+    TEAM_NAME = "Team M&P — Mugisha Kayishema & Principie Cyubahiro"
