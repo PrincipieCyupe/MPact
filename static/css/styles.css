@@ -71,6 +71,7 @@ html {
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 body {
   font-family: var(--font);
@@ -78,6 +79,8 @@ body {
   background: var(--bg);
   line-height: 1.6;
   min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 a { color: var(--accent); text-decoration: none; transition: color var(--t) var(--ease); }
 a:hover { color: var(--accent-hover); }
@@ -167,6 +170,15 @@ h5 { font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-sp
 }
 .nav-links a:hover, .nav-links button:hover { color: #fff; background: rgba(255,255,255,.07); }
 .nav-links a.active { color: #A5B4FC; background: rgba(99,102,241,.15); font-weight: 600; }
+
+/* Responsive nav label variants */
+.nav-btn-short { display: none; }
+@media (max-width: 560px) {
+  .nav-btn-full { display: none; }
+  .nav-btn-short { display: inline; }
+  .nav-link-text { display: none; }
+  .nav-links .btn { padding: 5px 10px; font-size: .75rem; }
+}
 
 /* Light nav variant — used by admin */
 .nav-light {
@@ -599,8 +611,8 @@ tbody tr:hover .row-actions { opacity: 1; }
 
 /* Trust strip */
 .trust-strip {
-  display: flex; align-items: center; justify-content: center; gap: 48px;
-  margin-top: 64px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,.06);
+  display: flex; align-items: center; justify-content: center; gap: 36px;
+  margin-top: 56px; padding-top: 36px; border-top: 1px solid rgba(255,255,255,.06);
   flex-wrap: wrap; animation: fade-up .7s var(--ease-out) .45s both;
 }
 .trust-item   { text-align: center; }
@@ -1195,19 +1207,46 @@ tbody tr:hover .row-actions { opacity: 1; }
   .drawer-panel { width: 100%; max-width: 100vw; }
   .rank-card-inner { flex-wrap: wrap; }
   .rank-scores { width: 100%; }
+  /* Landing inline grids */
+  .landing-2col, .landing-3col, .landing-team { grid-template-columns: 1fr !important; }
+  .landing-2col-gap { gap: 32px !important; }
 }
 @media (max-width: 640px) {
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
-  .hero h1 { font-size: 2.875rem; }
-  .hero { padding: 88px 0 72px; }
-  .trust-strip { gap: 28px; }
+  .hero h1 { font-size: 2.5rem; }
+  .hero { padding: 88px 0 64px; }
+  .trust-strip { gap: 20px; padding-top: 28px; }
+  .trust-number { font-size: 1.5rem; }
   .nav-links { gap: 2px; }
   .form-row { grid-template-columns: 1fr; }
   .jobs-grid { grid-template-columns: 1fr; }
   .hero-actions { flex-direction: column; align-items: center; }
+  .hero-actions .btn-xl { width: 100%; max-width: 300px; justify-content: center; }
   .footer-inner { flex-direction: column; }
   .results-header { flex-direction: column; }
   .rank-card-inner { gap: 14px; }
   .rank-score-ring { display: none; }
+  /* Landing inline grids */
+  .landing-2col, .landing-3col, .landing-team { grid-template-columns: 1fr !important; gap: 24px !important; }
+  /* Powered-by badge — wrap on small screens */
+  .hero-powered-sub { display: none; }
+  /* Container */
+  .container { padding: 0 16px; }
+}
+@media (max-width: 480px) {
+  .hero h1 { font-size: 2rem; letter-spacing: -.04em; }
+  .hero-sub { font-size: .9375rem; }
+  .hero { padding: 72px 0 56px; }
+  .nav-inner { padding: 0 14px; }
+  .nav-brand { font-size: .9375rem; }
+  .auth-shell { grid-template-columns: 1fr; }
+  .auth-panel-left { display: none; }
+  .apply-main { padding: 24px 16px 56px; }
+  .apply-form-inner { padding: 20px 16px; }
+  .rank-card-inner { padding: 14px 16px; }
+  .summary-pills { gap: 6px; }
+  .summary-pill { padding: 6px 12px; font-size: .75rem; }
+  .bulk-bar { flex-direction: column; gap: 10px; align-items: flex-start; }
+  .bulk-actions { flex-wrap: wrap; }
 }
