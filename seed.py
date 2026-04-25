@@ -617,16 +617,35 @@ DEMO_APPLICANTS = [
 ]
 
 
-def seed():
+def seed(recruiter_email=None):
+    from models import Recruiter
+
     app = create_app()
     with app.app_context():
         if Job.query.count() > 0:
             print("[seed] Database already has data — skipping. Delete instance/mpact.db to re-seed.")
             return
 
+        # Resolve recruiter
+        recruiter = None
+        if recruiter_email:
+            recruiter = Recruiter.query.filter_by(email=recruiter_email.strip().lower()).first()
+            if not recruiter:
+                print(f"[seed] ERROR: No recruiter found with email '{recruiter_email}'. Register first.")
+                return
+        else:
+            recruiter = Recruiter.query.first()
+            if not recruiter:
+                print("[seed] ERROR: No recruiter accounts exist yet.")
+                print("       Register a recruiter account at /recruiter/register, verify it, then re-run:")
+                print("       python seed.py your@email.com")
+                return
+
+        print(f"[seed] Assigning all jobs to recruiter: {recruiter.name} ({recruiter.email})")
+
         jobs = []
         for jd in DEMO_JOBS:
-            j = Job(**jd, is_published=True)
+            j = Job(**jd, is_published=True, recruiter_id=recruiter.id)
             db.session.add(j)
             jobs.append(j)
         db.session.flush()
@@ -675,4 +694,6 @@ def seed():
 
 
 if __name__ == "__main__":
-    seed()
+    import sys
+    email_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    seed(email_arg)
