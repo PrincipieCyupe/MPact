@@ -99,8 +99,8 @@ mpact/
 │   ├── __init__.py           admin_required decorator
 │   ├── public.py             Landing, job browse, job detail, apply form, status lookup
 │   ├── admin_auth.py         Recruiter register, login, logout, email verification
-│   ├── admin_jobs.py         Job CRUD, CSV import, JD extraction
-│   └── admin_screening.py    AI screening, results, CSV export, bulk actions, notes
+│   ├── admin_jobs.py         Job CRUD, CSV import
+│   └── admin_screening.py    AI screening, results, JD extraction, CSV export, bulk actions, notes
 │
 ├── services/
 │   ├── gemini_service.py     Batch AI evaluation, bias detection, JD extraction
@@ -434,7 +434,6 @@ Candidates can look up their application status at any time using their email ad
 - Create, edit, publish, and unpublish jobs
 - Configurable scoring weights per job (skills / experience / education / projects — must sum to 100)
 - Custom application questions (up to 10 per job)
-- JD auto-extraction: paste any job description text and Gemini extracts structured requirements automatically
 
 ### Candidate Screening
 - Run AI screening on all applicants for a job with a single click
@@ -443,6 +442,7 @@ Candidates can look up their application status at any time using their email ad
 - Candidate detail drawer: full profile, structured experience timeline, certifications, AI reasoning, bias notes
 - Inline recruiter notes per candidate
 - Status management: new → reviewed → shortlisted → interview → rejected
+- **JD auto-extraction:** paste any job description into the screening page and Gemini extracts structured requirements (skills, experience level, education) automatically — no manual form filling needed
 
 ### Bulk Actions
 - Select multiple candidates and update status in one action
