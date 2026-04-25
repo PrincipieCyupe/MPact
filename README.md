@@ -2,7 +2,9 @@
 
 > **Umurava AI Hackathon 2026** · Team M&P — Mugisha Kayishema & Principie Cyubahiro · Kigali, Rwanda
 
-**Live Demo:** [mpact.up.railway.app](https://mpact.up.railway.app)
+**Live Demo:** [mpact.principie.tech](https://mpact.principie.tech) Or [mpact.up.railway.app](https://mpact.up.railway.app)
+
+**Demo Video:** [https://youtu.be/Jiw7XQ3IawI]([url](https://youtu.be/Jiw7XQ3IawI))
 
 Mpact is a full-stack recruiting platform that automates candidate screening using a transparent two-layer scoring system, deterministic heuristics combined with Gemini AI then surfaces a ranked shortlist with complete explainability for every decision. Built specifically for African hiring teams.
 
