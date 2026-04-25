@@ -4,7 +4,10 @@
 
 **Public URL:** [mpact.principie.tech](https://mpact.principie.tech) Or [mpact.up.railway.app](https://mpact.up.railway.app)
 
-**Demo Video:** [https://youtu.be/Jiw7XQ3IawI](https://youtu.be/Jiw7XQ3IawI)
+**Demo Video:** [https://youtu.be/Jiw7XQ3IawI](https://youtu.be/Jiw7XQ3IawI) 
+
+**Google slides link:** [Google slides](https://docs.google.com/presentation/d/16vdKojAN03k-caskWVdnDNlHJlyAsewn/edit?usp=sharing&ouid=101380111693846555448&rtpof=true&sd=true)
+
 
 Mpact is a full-stack recruiting platform that automates candidate screening using a transparent two-layer scoring system, deterministic heuristics combined with Gemini AI then surfaces a ranked shortlist with complete explainability for every decision. Built specifically for African hiring teams.
 
