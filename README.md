@@ -175,7 +175,7 @@ The flow starts at the landing page, moves to job browsing, and branches on whet
 **Recruiter section (bottom half):**
 The recruiter logs in and views the applicant list and dashboard stats. A decision diamond asks whether to run AI screening:
 - **NO branch** → Manual review of applicants (no scoring, recruiter reads profiles directly).
-- **YES branch** → Three sequential processing steps: Gemini 2.5 batch evaluation (produces strengths, gaps, recommendation per candidate), then the deterministic scoring engine (4-axis heuristic covering skills, experience, education, projects — weighted at 60%), then a bias detection check via Gemini. These combine into the final score formula (`AI × 0.4 + Weighted × 0.6`) and a ranked shortlist is generated.
+- **YES branch** → Three sequential processing steps: Gemini 2.5 Flash lite batch evaluation (produces strengths, gaps, recommendation per candidate), then the deterministic scoring engine (4-axis heuristic covering skills, experience, education, projects — weighted at 60%), then a bias detection check via Gemini. These combine into the final score formula (`AI × 0.4 + Weighted × 0.6`) and a ranked shortlist is generated.
 
 After screening, another decision diamond: **Shortlisted?**
 - **YES** → Send shortlist notification email → Recruiter applies bulk status actions → Export ranked results as CSV → End.
