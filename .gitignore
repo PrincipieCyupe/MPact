@@ -9,5 +9,4 @@ venv/
 node_modules/
 .DS_Store
 testing.py
-.claude
 .env.example
