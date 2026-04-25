@@ -4,7 +4,7 @@
 
 **Live Demo:** [mpact.up.railway.app](https://mpact.up.railway.app)
 
-Mpact is a full-stack recruiting platform that automates candidate screening using a transparent two-layer scoring system — deterministic heuristics combined with Gemini AI — then surfaces a ranked shortlist with complete explainability for every decision. Built specifically for African hiring teams.
+Mpact is a full-stack recruiting platform that automates candidate screening using a transparent two-layer scoring system, deterministic heuristics combined with Gemini AI then surfaces a ranked shortlist with complete explainability for every decision. Built specifically for African hiring teams.
 
 ---
 
@@ -12,20 +12,43 @@ Mpact is a full-stack recruiting platform that automates candidate screening usi
 
 Hiring teams in Africa receive dozens to hundreds of applications per role. Manual screening is slow, inconsistent, and susceptible to unconscious bias. Recruiters spend most of their time reading CVs before any real evaluation even begins.
 
-Mpact solves this by automating the first-pass screening: every applicant is scored across four axes, evaluated by Gemini AI, and ranked in a shortlist with full reasoning — in seconds, not days.
+Mpact solves this by automating the first-pass screening: every applicant is scored across four axes, evaluated by Gemini AI, and ranked in a shortlist with full reasoning in seconds, not days.
 
 ---
 
 ## Why Flask Instead of Next.js
 
-The Umurava brief permits alternative stacks with justification. We chose Python + Flask because:
+The Umurava brief permits alternative stacks with justification. We chose Python + Flask for a combination of technical, ecosystem, and team-fit reasons.
 
-1. **Python owns the AI ecosystem.** Google's `google-generativeai` SDK, `pdfplumber`, and prompt engineering patterns are first-class in Python. Equivalent Node.js wrappers lag behind.
-2. **Zero build pipeline.** Jinja2 server-side templates eliminate the hydration complexity of SSR React, enabling a polished UI without webpack, ESBuild, or a separate frontend process.
-3. **Hackathon velocity.** SQLAlchemy + Flask Blueprints let a two-person team deliver all CRUD, AI orchestration, PDF parsing, CSV ingestion, and email notifications in hours, not days.
-4. **Gemini remains central.** `gemini-2.5-flash` is used via the official Python SDK, fully satisfying the core AI requirement.
+### Team expertise
 
-Architecturally, the structure mirrors the recommended stack: Blueprint routes map to Next.js pages/API routes, Flask-SQLAlchemy maps to Prisma, Jinja2 maps to React components.
+Both team members are most comfortable in Python. Principie Cyubahiro, the lead developer, has years of hands-on Python experience across multiple production and personal projects — spanning web APIs, automation tooling, data pipelines, and AI integrations. Mugisha Kayishema brings complementary Python experience on the backend and data side. Choosing a stack we know deeply meant we could spend hackathon time building features instead of debugging unfamiliar tooling. Reaching for Next.js would have introduced React, TypeScript, and Node.js module resolution friction at exactly the moment when speed mattered most.
+
+### Technical justification
+
+1. **Python owns the AI ecosystem.** Google's `google-generativeai` SDK, `pdfplumber`, and prompt engineering patterns are first-class in Python. Equivalent Node.js wrappers lag behind in API surface and documentation quality. Working directly with the official SDK meant zero translation layer between our prompts and the model.
+
+2. **Zero build pipeline.** Jinja2 server-side templates eliminate the hydration complexity of SSR React. There is no webpack config, no ESBuild, no separate frontend dev server, and no client/server state synchronization to manage. The entire UI is produced by one Python process — simpler to deploy, simpler to debug.
+
+3. **Hackathon velocity.** SQLAlchemy + Flask Blueprints let a two-person team ship all CRUD operations, AI orchestration, PDF parsing, CSV ingestion, bulk status actions, and transactional email in hours rather than days. Flask's minimal surface area means less framework ceremony and more time on product.
+
+4. **Gemini remains central.** `gemini-2.5-flash` is invoked through the official Python SDK throughout — batch candidate evaluation, resume field extraction, JD auto-extraction, and bias detection all run through the same client. The Python SDK is always in sync with the latest model capabilities and API changes.
+
+5. **SQLite → PostgreSQL with no code changes.** SQLAlchemy's dialect abstraction means local development runs on a zero-setup SQLite file and production runs on Railway's PostgreSQL instance. Switching a single environment variable (`DATABASE_URL`) is the only change required between environments.
+
+### Architectural equivalence
+
+The structure deliberately mirrors the recommended stack so the codebase is familiar to anyone coming from Next.js:
+
+| Flask (this project) | Next.js equivalent |
+|---|---|
+| Blueprint route files | `pages/` and `app/api/` routes |
+| Flask-SQLAlchemy models | Prisma schema |
+| Jinja2 templates | React components |
+| `services/` layer | server actions / service modules |
+| `config.py` | `next.config.js` + environment variables |
+
+The separation of concerns — public routes, admin routes, AI services, email services, database models — would translate cleanly to a Next.js rewrite if one were ever needed.
 
 ---
 
