@@ -225,6 +225,32 @@ Ten classes covering domain entities, service modules, and result objects. The d
 
 ---
 
+### 6. Entity Relationship Diagram
+
+![MPACT Entity Relationship Diagram](docs/diagram-erd.jpeg)
+
+The ERD shows the physical database structure: four tables, their column types and constraints, and the relationships that enforce data integrity. The subtitle reads *PostgreSQL (prod) · SQLite (dev) · SQLAlchemy ORM*, reflecting that the same schema runs on both engines without any code changes.
+
+**RECRUITERS**
+The root of the ownership model. Every job and every applicant traces back to a recruiter through the foreign key chain. Key columns: `email` is `VARCHAR(150) · UNIQUE` — one account per email address, enforced at the database level. `password_hash` is `VARCHAR(256) · NOT NULL` — passwords are never stored in plaintext. `is_verified` is `BOOLEAN · DEFAULT false` — a recruiter cannot access the dashboard until email verification sets this to `true`. `verification_token` is `VARCHAR · NULLABLE` — populated when a verification email is sent, cleared once the token is consumed.
+
+**JOBS**
+Linked to RECRUITERS via `recruiter_id` (FK → recruiters.id). This is the ownership link — when a recruiter logs in, the system queries `WHERE recruiter_id = session_recruiter_id` so recruiters only ever see their own jobs. Notable columns: `required_skills TEXT` stores a comma-separated skill list that the scoring engine tokenizes for matching. `is_active BOOLEAN · DEFAULT true` controls whether the job appears on the public listings page. `job_type VARCHAR(50) · ENUM` stores employment type (Full-time, Contract, etc.).
+
+**APPLICANTS**
+Linked to JOBS via `job_id` (FK → jobs.id). The cardinality shown is `jobs 1——N applicants` and also `recruiters 1——N applicants (via jobs)` — the ERD correctly notes the indirect relationship. Screening output columns sit directly on this table: `final_score FLOAT · NULLABLE` (null until screening runs), `ai_score FLOAT · NULLABLE`, `deterministic_score FLOAT · NULLABLE`. The `strengths` and `gaps` columns are `TEXT · JSON list` — Gemini's output is serialised as JSON and stored here. `bias_flag BOOLEAN · DEFAULT false` is set by Gemini's bias detection pass. `status ENUM` tracks pipeline stage: `pending / shortlisted / rejected`. The constraint annotation in the legend makes the scoring formula explicit: `final_score = ai_score × 0.4 + det_score × 0.6`.
+
+**JOB_FIELDS**
+The composition table for custom application questions and AI-extracted JD fields. Linked to JOBS via `job_id` (FK → jobs.id) with `jobs 1——N job_fields (composition)` — if a job is deleted, its fields are cascade-deleted. `extracted_by_ai BOOLEAN · DEFAULT false` distinguishes fields the recruiter created manually from fields Gemini extracted from a pasted job description. `weight FLOAT · DEFAULT 1.0` allows individual fields to carry different scoring importance.
+
+**Relationships summary (from the legend):**
+- `recruiters 1——N jobs` — one recruiter owns many jobs
+- `jobs 1——N applicants` — one job receives many applications
+- `jobs 1——N job_fields` (composition) — job fields are owned by and deleted with the job
+- `recruiters 1——N applicants` (via jobs) — indirect but enforced by the FK chain
+
+---
+
 ## Quick Start
 
 ```bash
