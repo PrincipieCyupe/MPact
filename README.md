@@ -32,7 +32,7 @@ Both team members are most comfortable in Python. Principie Cyubahiro, the lead 
 
 3. **Hackathon velocity.** SQLAlchemy + Flask Blueprints let a two-person team ship all CRUD operations, AI orchestration, PDF parsing, CSV ingestion, bulk status actions, and transactional email in hours rather than days. Flask's minimal surface area means less framework ceremony and more time on product.
 
-4. **Gemini remains central.** `gemini-2.5-flash` is invoked through the official Python SDK throughout — batch candidate evaluation, resume field extraction, JD auto-extraction, and bias detection all run through the same client. The Python SDK is always in sync with the latest model capabilities and API changes.
+4. **Gemini remains central.** `gemini-2.5-flash-lite` is invoked through the official Python SDK throughout — batch candidate evaluation, resume field extraction, JD auto-extraction, and bias detection all run through the same client. The Python SDK is always in sync with the latest model capabilities and API changes.
 
 5. **SQLite → PostgreSQL with no code changes.** SQLAlchemy's dialect abstraction means local development runs on a zero-setup SQLite file and production runs on Railway's PostgreSQL instance. Switching a single environment variable (`DATABASE_URL`) is the only change required between environments.
 
@@ -60,7 +60,7 @@ The separation of concerns — public routes, admin routes, AI services, email s
 ├──────────────────┬────────────────────────────┬──────────────────────┤
 │  PUBLIC SITE     │   ADMIN / RECRUITER         │   AI LAYER           │
 │                  │                             │                      │
-│  Landing Page    │  Recruiter Auth             │  Gemini 2.5 Flash    │
+│  Landing Page    │  Recruiter Auth             │  Gemini 2.5 Flash Lite│
 │  Job Browse      │  Dashboard + Stats          │                      │
 │  Job Detail      │  Job CRUD                   │  Batch Evaluation    │
 │  Apply Form      │  Applicant Management       │  JD Auto-Extraction  │
@@ -124,6 +124,107 @@ mpact/
 
 ---
 
+## Diagrams
+
+Five diagrams cover the system from different angles — behavioural, structural, and deployment. Each was drawn to match the actual code, not an idealised spec.
+
+---
+
+### 1. System Architecture
+
+![MPACT System Architecture](docs/diagram-architecture.jpeg)
+
+The architecture is split into five named tiers, reflecting how requests actually flow through the application:
+
+- **Client Tier** — Three surfaces share the same backend: the public candidate site (browse, apply, status lookup), the admin recruiter dashboard (jobs, screening, export), and any browser or mobile client. All rendering uses server-side Jinja2; no separate frontend process.
+- **Gateway Tier** — Every request enters through the Flask application factory (`app.py`), which registers all blueprints. In production, Gunicorn WSGI sits in front as defined in the `Procfile`. The `admin_required` decorator in `routes/__init__.py` acts as the auth middleware, enforcing session checks before any recruiter route is served.
+- **Application Tier (`routes/`)** — Four blueprint files divide the surface area cleanly: `public.py` for all candidate-facing pages, `admin_auth.py` for recruiter registration/login/email verification, `admin_jobs.py` for job CRUD and CSV import, and `admin_screening.py` for AI screening, ranked results, bulk actions, and CSV export.
+- **Services Tier (`services/`)** — Business logic lives here, separate from routing. `resume_parser.py` handles PDF text extraction via `pdfplumber` and Gemini-powered field autofill. `email_service.py` sends candidate confirmation, shortlist, and rejection emails. `scoring_engine.py` runs the deterministic 4-axis heuristic (60% weight). `gemini_service.py` orchestrates batch AI evaluation, bias detection, JD field extraction, and the heuristic fallback.
+- **AI Layer** — `gemini-2.5-flash-lite` is the single model used for all AI tasks: batch candidate evaluation (strengths, gaps, recommendation), bias detection flags, JD auto-extraction from pasted text, and resume field parsing. These are four distinct prompt patterns in `gemini_service.py`, all hitting the same model endpoint.
+- **Data Tier** — SQLAlchemy ORM with a single model file (`models.py`) defines four tables: `Recruiter`, `Job`, `Applicant`, `JobField`. SQLite is used locally with zero configuration; a `DATABASE_URL` environment variable switches the dialect to PostgreSQL on Railway for production. Uploaded PDF resumes and CSV imports are stored on the local filesystem under `instance/uploads/`.
+
+---
+
+### 2. Use Case Diagram
+
+![MPACT Use Case Diagram](docs/diagram-use-case.jpeg)
+
+The diagram identifies three actors and maps every interaction in the system:
+
+**Candidate** initiates six use cases: registering and logging in, browsing published job listings, viewing a job's detail page, submitting an application form, uploading a PDF resume, and checking their application status using their reference number and email. Registration includes an email verification step (labelled "Input verification (email OTP)") that connects to the AI Service actor — in practice this is the Resend API sending a verification link, though the diagram uses the generic "AI Service" boundary for all external integrations.
+
+**Recruiter** initiates seven use cases: managing job postings (which includes CSV bulk import as an `<<include>>` extension, and JD auto-extraction via Gemini as a second `<<include>>`), reviewing individual applicants, running AI screening (which includes Bias Detection via Gemini and extends to a Heuristic Fallback when Gemini is unavailable), applying bulk status actions across selected candidates, exporting ranked results as CSV, downloading individual resumes, and triggering email notifications.
+
+**AI Service (Gemini)** appears as a right-hand actor with three inbound connections: JD auto-extraction, bias detection during screening, and input verification. This correctly models Gemini as an external dependency that the system calls rather than controls.
+
+The `<<extend>>` relationship on Heuristic Fallback is particularly important: it fires only when the primary Gemini call fails, which is the correct UML semantics for an optional extension point. This matches the fallback logic in `gemini_service.py`.
+
+---
+
+### 3. Applicant Flow
+
+![MPACT Applicant Flow](docs/diagram-flow.jpeg)
+
+A flowchart that traces the full lifecycle of a hiring round from first candidate visit to final export. It is divided into two clear sections by a horizontal divider labelled **RECRUITER / ADMIN ACTIONS**.
+
+**Candidate section (top half):**
+The flow starts at the landing page, moves to job browsing, and branches on whether a suitable job is found (NO → End). If a job is found, the candidate views the detail page, optionally uploads a PDF resume, and fills in the application form. A second branch handles CSV bulk import — if the recruiter is importing from LinkedIn or Indeed rather than accepting individual applications, the CSV is parsed and applicants are created directly. Both paths converge at "Application submitted," after which the system automatically sends a confirmation email to the candidate with their reference number.
+
+**Recruiter section (bottom half):**
+The recruiter logs in and views the applicant list and dashboard stats. A decision diamond asks whether to run AI screening:
+- **NO branch** → Manual review of applicants (no scoring, recruiter reads profiles directly).
+- **YES branch** → Three sequential processing steps: Gemini 2.5 batch evaluation (produces strengths, gaps, recommendation per candidate), then the deterministic scoring engine (4-axis heuristic covering skills, experience, education, projects — weighted at 60%), then a bias detection check via Gemini. These combine into the final score formula (`AI × 0.4 + Weighted × 0.6`) and a ranked shortlist is generated.
+
+After screening, another decision diamond: **Shortlisted?**
+- **YES** → Send shortlist notification email → Recruiter applies bulk status actions → Export ranked results as CSV → End.
+- **NO** → Send rejection email (the rejection branch is shown leaving the left side of the diamond).
+
+---
+
+### 4. System Block Diagram
+
+![MPACT System Block Diagram](docs/diagram-block.jpeg)
+
+A high-level input/output view of the system, useful for understanding data flow without implementation detail.
+
+**Inputs (left column, 7 sources):**
+Candidate Visit / Browse, Job Application Submission, PDF Resume Upload, CSV Bulk Import, Recruiter Login / Auth, Job Posting / CRUD, and AI Screening Trigger. These represent every external action that causes the system to do something.
+
+**Core Processing Modules (centre, two columns):**
+The left column contains the user-facing modules — Public Site Module, Auth / Recruiter Module, File Processing Module, Job Management Module, and Applicant Management Module. These correspond directly to the five blueprint files in `routes/` plus the file handling in `services/`. The right column contains the backend processing modules — AI Screening Module, Gemini AI Layer, Scoring Engine Module, Email Service Module, and Database Layer (SQLite/PostgreSQL). A sixth module, Bulk Actions & Export, sits at the bottom centre as a cross-cutting concern that draws from both columns.
+
+The dense arrow network between modules reflects that this is not a pipeline — it is a mesh. The database is written to by almost every module; the AI Screening Module consults both the Gemini AI Layer and the Scoring Engine; Email is triggered from both candidate actions and recruiter bulk actions.
+
+**Outputs (right column, 7 results):**
+Job Listings Page, Ranked Shortlist, AI Score Report, Email Notifications, Recruiter Dashboard, CSV Export / Download, and Status Lookup Page. Every output traces back to at least two input paths, which is what makes the cross-module arrow density appropriate.
+
+---
+
+### 5. Class Diagram
+
+![MPACT Class Diagram](docs/diagram-class.jpeg)
+
+Ten classes covering domain entities, service modules, and result objects. The diagram uses UML stereotypes (`«Job»`, `«Recruiter»`, etc.) to signal that these are not arbitrary classes but domain-layer objects.
+
+**Domain entities:**
+- `«Recruiter»` — PK, credentials (passwordHash), `isVerified` flag, and four methods covering the auth lifecycle. One recruiter creates zero-or-more jobs (1 → 0..*).
+- `«Job»` — Stores the posting data including `requiredSkills` as text, configurable `jobType` enum, and an `extractFieldsWithAI()` method that calls Gemini to parse a pasted JD into structured `JobField` records. One job has zero-or-more `JobField` entries (composition).
+- `«JobField»` — Represents a single extracted field from the JD (e.g., required experience, seniority level). The `extractedByAI` boolean tracks whether the value came from Gemini extraction or recruiter manual entry.
+- `«Applicant»` — Stores the candidate profile, `resumePath`, `status` enum (new/reviewed/shortlisted/interview/rejected), `finalScore`, and recruiter `notes`. Key methods include `importFromCSV()` (for bulk ingestion) and `checkStatus()` for the self-service status page.
+
+**Service classes:**
+- `«ScoringEngine»` — Holds the four configurable axis weights plus the fixed `aiWeight = 0.4` and `deterministicWeight = 0.6` constants. Its `rankApplicants()` method produces the sorted shortlist.
+- `«GeminiService»` — API key, model name, batch size, and two capability flags (`fallbackEnabled`, `biasDetectionOn`). Six methods cover every Gemini use case: `evaluateBatch()`, `extractJDFields()`, `detectBias()`, `parseResume()`, `heuristicFallback()`, and `generateReason()`.
+- `«EmailService»` — Holds transport configuration (SMTP host/port or Resend API key). Five send methods correspond to the five email events in the system.
+- `«ResumeParser»` — Wraps `FileParser` and adds Gemini-powered field extraction. The `geminiEnabled` flag controls whether `parseWithGemini()` or plain text extraction is used.
+- `«FileParser»` — Low-level file handling. Supports PDF (via pdfplumber) and CSV. Separate from `ResumeParser` so CSV import can use it directly without going through the resume parsing chain.
+- `«AIScreeningResult»` — A result object (not a database model, but a transient object) that holds the merged output of both scoring layers: `aiScore`, `deterministicScore`, `finalScore`, `strengths` (list), `gaps` (list), `recommendation` string, and `biasFlag` boolean.
+
+**Key relationships:**
+`ScoringEngine` uses `GeminiService` (dashed dependency) — it delegates the AI portion of scoring. `GeminiService` produces `AIScreeningResult` (0..1 per applicant). `ResumeParser` uses `FileParser` for raw text extraction. `Recruiter` manages `Applicant` (association, 1 to 0..*) — recruiters own the screening decisions, not the applications.
+
+---
+
 ## Quick Start
 
 ```bash
@@ -165,7 +266,7 @@ Register a recruiter account, verify your email, and you're in.
 |---|---|---|---|
 | `FLASK_SECRET_KEY` | Yes (prod) | `mpact-dev-secret` | Session encryption key |
 | `GEMINI_API_KEY` | Recommended | — | Google AI API key — enables real AI screening |
-| `GEMINI_MODEL` | No | `gemini-1.5-flash` | Gemini model ID |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash-lite` | Gemini model ID |
 | `DATABASE_URL` | Yes (prod) | SQLite local | PostgreSQL connection string |
 | `RESEND_API_KEY` | For email | — | Resend API key for transactional email |
 | `MAIL_SERVER` | For email | — | SMTP server (alternative to Resend) |
@@ -178,7 +279,18 @@ Register a recruiter account, verify your email, and you're in.
 
 ---
 
-## Scoring System
+## AI Decision Flow
+
+When a recruiter triggers screening, every applicant for that job passes through the following steps in order:
+
+1. **Deterministic scoring** — `scoring_engine.py` computes four axis scores (skills, experience, education, projects) using the job's configured weights. This runs entirely offline, no API call needed.
+2. **Gemini batch evaluation** — `gemini_service.py` builds a single prompt containing the job description and all applicant summaries, then makes one API call to `gemini-2.5-flash-lite`. The response is a JSON array — one evaluation object per candidate.
+3. **Score blending** — Each candidate's final score is computed: `Final = Weighted × 0.6 + AI × 0.4`.
+4. **Bias detection** — Gemini's response includes a `bias_flag` field per candidate. Flagged candidates surface a ⚠ warning in the UI prompting the recruiter to review that decision manually.
+5. **Ranking** — Candidates are sorted by final score descending. The recruiter selects Top 10, 20, or 50 as their shortlist.
+6. **Human decision** — Recruiters review the ranked list, read per-candidate AI reasoning and gap analysis, add notes, and assign statuses. No candidate is automatically rejected or shortlisted without a human action.
+
+If the Gemini batch call fails (quota exceeded, network error), the system retries with individual per-candidate calls. If Gemini is entirely unavailable, a deterministic heuristic in `gemini_service.py` produces the same JSON schema — skills intersection, experience ratio, education level — so the demo always works without an API key.
 
 ### Two-Layer Architecture
 
@@ -357,7 +469,7 @@ The app is deployed on Railway with a PostgreSQL database.
 # Required environment variables for production
 FLASK_SECRET_KEY=<random 32+ char secret>
 GEMINI_API_KEY=<your Google AI key>
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-2.5-flash-lite
 DATABASE_URL=<postgresql://...>
 RESEND_API_KEY=<your Resend key>
 MAIL_FROM=noreply@yourdomain.com
@@ -379,7 +491,7 @@ Database migrations run automatically on startup via `_migrate_db()` in `app.py`
 | Language | Python 3.11 | Best AI/ML ecosystem; Gemini SDK is first-class |
 | Web framework | Flask 3.0 | Rapid development; Blueprint architecture scales cleanly |
 | ORM | SQLAlchemy 3.1 | Mature, supports SQLite → PostgreSQL with no code changes |
-| AI | Gemini 2.5 Flash | Mandatory per brief; most capable Gemini model available |
+| AI | Gemini 2.5 Flash Lite | Fast, capable Gemini model via official Python SDK |
 | PDF parsing | pdfplumber | Accurate text extraction from standard PDFs |
 | Email | Resend API | HTTP-based; works from all cloud providers |
 | Deployment | Gunicorn + Railway | Standard Python production stack |
@@ -390,7 +502,21 @@ Database migrations run automatically on startup via `_migrate_db()` in `app.py`
 
 ---
 
-## Known Limitations
+## Assumptions & Limitations
+
+### Assumptions
+
+These design decisions were made explicitly and would need revisiting in a long-term production system:
+
+- **Recruiters are trusted actors.** The admin panel has no role-based access control beyond login. Each recruiter sees only their own jobs and candidates — isolation is enforced at the query level, not via permissions.
+- **Candidates apply in good faith.** There is no duplicate-application detection beyond same email + same job. A candidate could apply to the same role under different emails.
+- **PDF resumes are machine-readable.** The extraction pipeline assumes text-layer PDFs. Scanned image PDFs will return empty text and produce a zero resume score.
+- **Skills are keyword-matchable.** The scoring engine assumes job requirements and applicant skills can be compared as token sets. Domain synonyms ("ML" vs "Machine Learning") may not match.
+- **English-language resumes and job descriptions.** Gemini prompts are written in English. Non-English content may produce lower-quality AI evaluations.
+- **Single-server deployment.** File uploads are stored on the local filesystem. This works on Railway's single-instance deployment but would require shared object storage (S3, GCS) if horizontal scaling were needed.
+- **Batch size is bounded.** The system assumes no single job will receive more than ~80 applicants before screening is run. Very large batches fall back to sequential calls automatically, but are slower.
+
+### Limitations
 
 - **PDF parsing quality**: `pdfplumber` handles standard PDFs well but may struggle with scanned documents or heavily formatted templates.
 - **Skills scoring**: Token-based matching reduces false positives but may miss synonyms (e.g., "Node" vs "Node.js"). A production system would use embedding similarity.
