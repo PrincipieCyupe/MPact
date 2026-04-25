@@ -11,7 +11,10 @@ from extensions import db
 from models import Job, Applicant
 from services.file_parser import extract_pdf_text
 from services.resume_parser import parse_resume_fields
-from services.email_service import send_application_received_email
+from services.email_service import (
+    send_application_received_email,
+    send_new_application_notification,
+)
 
 bp = Blueprint("public", __name__)
 
@@ -203,6 +206,11 @@ def apply(job_id):
         db.session.commit()
         brand = current_app.config.get("BRAND_NAME", "Mpact")
         send_application_received_email(applicant, job, brand)
+        if job.recruiter_id:
+            dashboard_url = url_for(
+                "admin_screening.results", job_id=job.id, _external=True
+            )
+            send_new_application_notification(applicant, job, brand, dashboard_url)
         return redirect(url_for("public.apply_success", job_id=job.id, applicant_id=applicant.id))
 
     return render_template("public/apply.html", job=job)

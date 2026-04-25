@@ -1,5 +1,9 @@
-import smtplib
+import json
 import logging
+import smtplib
+import ssl
+import urllib.error
+import urllib.request
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -20,24 +24,12 @@ def _build_verification_html(brand: str, name: str, verify_url: str) -> str:
              style="background:#ffffff;border-radius:16px;overflow:hidden;
                     border:1px solid #E5E7EB;box-shadow:0 4px 24px rgba(0,0,0,.07)">
 
-        <!-- Brand header -->
         <tr>
           <td style="background:#09090B;padding:28px 40px">
-            <table cellpadding="0" cellspacing="0"><tr>
-              <td style="width:34px;height:34px;background:#635BFF;border-radius:8px;
-                         text-align:center;vertical-align:middle">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                     stroke="white" stroke-width="2.5" stroke-linecap="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              </td>
-              <td style="padding-left:10px;font-size:18px;font-weight:800;
-                         color:#ffffff;letter-spacing:-.025em">{brand}</td>
-            </tr></table>
+            <span style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-.025em">{brand}</span>
           </td>
         </tr>
 
-        <!-- Body -->
         <tr>
           <td style="padding:40px">
             <p style="margin:0 0 6px;font-size:13px;font-weight:600;
@@ -54,7 +46,6 @@ def _build_verification_html(brand: str, name: str, verify_url: str) -> str:
               recruiter account.
             </p>
 
-            <!-- CTA button -->
             <table cellpadding="0" cellspacing="0" style="margin-bottom:28px">
               <tr>
                 <td style="border-radius:9px;background:#635BFF;
@@ -79,7 +70,6 @@ def _build_verification_html(brand: str, name: str, verify_url: str) -> str:
           </td>
         </tr>
 
-        <!-- Divider info row -->
         <tr>
           <td style="padding:20px 40px;background:#FAFAFA;border-top:1px solid #F0F0F0">
             <table cellpadding="0" cellspacing="0" width="100%"><tr>
@@ -98,7 +88,6 @@ def _build_verification_html(brand: str, name: str, verify_url: str) -> str:
           </td>
         </tr>
 
-        <!-- Footer -->
         <tr>
           <td style="padding:16px 40px;border-top:1px solid #E5E7EB">
             <p style="margin:0;font-size:11px;color:#C4C4C4">
@@ -115,43 +104,98 @@ def _build_verification_html(brand: str, name: str, verify_url: str) -> str:
 
 
 def send_verification_email(to_email: str, to_name: str, verify_url: str) -> bool:
-    """Send HTML verification email. Returns True if sent via SMTP, False if SMTP not configured."""
-    brand = current_app.config.get("BRAND_NAME", "Mpact")
-    html  = _build_verification_html(brand, to_name, verify_url)
+    """
+    Send HTML verification email.
+    Returns True on success, False if no transport is configured.
+    Tries Resend API first, then SMTP.
+    """
+    brand       = current_app.config.get("BRAND_NAME", "Mpact")
+    resend_key  = current_app.config.get("RESEND_API_KEY", "")
     mail_server = current_app.config.get("MAIL_SERVER", "")
+    html        = _build_verification_html(brand, to_name, verify_url)
+    subject     = f"Verify your {brand} recruiter account"
+    first       = to_name.split()[0] if to_name else "there"
+    plain       = (
+        f"Hi {first},\n\n"
+        f"Verify your {brand} recruiter account by visiting:\n{verify_url}\n\n"
+        f"This link expires in 24 hours. If you didn't sign up, ignore this email.\n\n"
+        f"{brand}"
+    )
 
-    if not mail_server:
-        logger.warning("[DEV] SMTP not configured — verification link: %s", verify_url)
-        return False
+    from_addr = (
+        current_app.config.get("MAIL_FROM")
+        or current_app.config.get("MAIL_USERNAME")
+        or "no-reply@mpact.rw"
+    )
 
-    try:
-        from_addr = (
-            current_app.config.get("MAIL_FROM")
-            or current_app.config.get("MAIL_USERNAME")
-            or f"no-reply@mpact.rw"
+    # ── Resend API ────────────────────────────────────────────────────────────
+    if resend_key:
+        payload = json.dumps({
+            "from":    f"{brand} <{from_addr}>",
+            "to":      [to_email],
+            "subject": subject,
+            "html":    html,
+            "text":    plain,
+        }).encode()
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {resend_key}",
+                "Content-Type":  "application/json",
+            },
+            method="POST",
         )
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"Verify your {brand} recruiter account"
-        msg["From"]    = f"{brand} <{from_addr}>"
-        msg["To"]      = to_email
-        msg.attach(MIMEText(html, "html"))
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = json.loads(resp.read())
+                logger.info("[email/resend] Verification sent to %s id=%s", to_email, result.get("id", ""))
+                return True
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode()
+            logger.error("[email/resend] HTTP %s: %s", exc.code, body)
+            return False
+        except Exception as exc:
+            logger.error("[email/resend] %s", exc)
+            return False
 
-        port = int(current_app.config.get("MAIL_PORT", 587))
-        if port == 465:
-            import ssl as _ssl
-            ctx = _ssl.create_default_context()
-            server = smtplib.SMTP_SSL(mail_server, port, timeout=10, context=ctx)
-        else:
-            server = smtplib.SMTP(mail_server, port, timeout=10)
-            server.ehlo()
-            server.starttls()
-        server.login(
-            current_app.config["MAIL_USERNAME"],
-            current_app.config["MAIL_PASSWORD"],
-        )
-        server.sendmail(from_addr, to_email, msg.as_string())
-        server.quit()
-        return True
-    except Exception as exc:
-        logger.error("Failed to send verification email to %s: %s", to_email, exc)
-        return False
+    # ── SMTP ──────────────────────────────────────────────────────────────────
+    if mail_server:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"]    = f"{brand} <{from_addr}>"
+            msg["To"]      = to_email
+            msg.attach(MIMEText(plain, "plain"))
+            msg.attach(MIMEText(html,  "html"))
+
+            port = int(current_app.config.get("MAIL_PORT", 587))
+            username = current_app.config.get("MAIL_USERNAME", "")
+            password = current_app.config.get("MAIL_PASSWORD", "")
+            print(f"[email/smtp] Connecting to {mail_server}:{port} as {username}", flush=True)
+            ctx = ssl.create_default_context()
+            if port == 465:
+                server = smtplib.SMTP_SSL(mail_server, port, timeout=30, context=ctx)
+            else:
+                server = smtplib.SMTP(mail_server, port, timeout=30)
+                server.ehlo()
+                server.starttls(context=ctx)
+                server.ehlo()
+            server.login(username, password)
+            server.sendmail(from_addr, to_email, msg.as_string())
+            server.quit()
+            print(f"[email/smtp] ✓ Verification sent to {to_email}", flush=True)
+            return True
+        except smtplib.SMTPAuthenticationError as exc:
+            print(f"[email/smtp] ✗ AUTH FAILED — check MAIL_USERNAME/MAIL_PASSWORD: {exc}", flush=True)
+            return False
+        except smtplib.SMTPException as exc:
+            print(f"[email/smtp] ✗ SMTP error: {exc}", flush=True)
+            return False
+        except Exception as exc:
+            print(f"[email/smtp] ✗ Unexpected error: {type(exc).__name__}: {exc}", flush=True)
+            return False
+
+    print("[email] No transport configured (RESEND_API_KEY and MAIL_SERVER both empty)", flush=True)
+    logger.warning("[DEV] No email transport — verification link: %s", verify_url)
+    return False

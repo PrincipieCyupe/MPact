@@ -60,12 +60,17 @@ def register():
         db.session.commit()
 
         verify_url = url_for("admin_auth.verify_email", token=token, _external=True)
+        mail_configured = bool(
+            current_app.config.get("MAIL_SERVER") or current_app.config.get("RESEND_API_KEY")
+        )
         sent = send_verification_email(email, name, verify_url)
 
         session["_pending_verify_email"] = email
         session["_pending_verify_name"]  = name
         if not sent:
             session["_dev_verify_url"] = verify_url
+            if mail_configured:
+                session["_email_error"] = True
 
         return redirect(url_for("admin_auth.verify_pending"))
 
@@ -74,11 +79,13 @@ def register():
 
 @bp.route("/verify-pending")
 def verify_pending():
-    email    = session.get("_pending_verify_email", "")
-    name     = session.get("_pending_verify_name", "")
-    dev_url  = session.pop("_dev_verify_url", None)
+    email       = session.get("_pending_verify_email", "")
+    name        = session.get("_pending_verify_name", "")
+    dev_url     = session.pop("_dev_verify_url", None)
+    email_error = session.pop("_email_error", False)
     return render_template("admin/verify_pending.html",
-                           email=email, name=name, dev_url=dev_url)
+                           email=email, name=name,
+                           dev_url=dev_url, email_error=email_error)
 
 
 @bp.route("/verify/<token>")
@@ -128,13 +135,20 @@ def resend_verification():
     db.session.commit()
 
     verify_url = url_for("admin_auth.verify_email", token=token, _external=True)
+    mail_configured = bool(
+        current_app.config.get("MAIL_SERVER") or current_app.config.get("RESEND_API_KEY")
+    )
     sent = send_verification_email(recruiter.email, recruiter.name, verify_url)
 
     session["_pending_verify_email"] = recruiter.email
     session["_pending_verify_name"]  = recruiter.name
     if not sent:
         session["_dev_verify_url"] = verify_url
-        flash("SMTP not configured — use the link below to verify during development.", "info")
+        if mail_configured:
+            session["_email_error"] = True
+            flash("Email sending failed — check Deploy Logs on Railway for the error.", "error")
+        else:
+            flash("No email transport configured — use the link below.", "info")
     else:
         flash("Verification email resent — check your inbox.", "success")
 

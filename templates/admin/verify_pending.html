@@ -89,15 +89,23 @@
         </div>
 
         {% if dev_url %}
-        <!-- Dev mode: SMTP not configured, show link directly -->
         <div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:10px;
                     padding:16px 18px;margin-bottom:24px">
           <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:var(--warn);
                     text-transform:uppercase;letter-spacing:.06em">
-            Dev mode — SMTP not configured
+            {% if email_error %}
+              Email sending failed — use link to verify
+            {% else %}
+              Dev mode — no email transport configured
+            {% endif %}
           </p>
           <p style="margin:0 0 10px;font-size:13px;color:var(--text-secondary);line-height:1.5">
-            No email server is set up. Click the link below to verify directly:
+            {% if email_error %}
+              Email delivery failed. Check Railway Deploy Logs for the exact error.
+              Use the link below to verify your account now:
+            {% else %}
+              No email server is set up. Click the link below to verify directly:
+            {% endif %}
           </p>
           <a href="{{ dev_url }}"
              style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);
